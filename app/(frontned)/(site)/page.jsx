@@ -1,9 +1,14 @@
 import Image from "next/image";
+import Hero from '@/app/components/home/Hero';
 
 export default function Home() {
     return (
-        <div className="flex-col flex min-h-screen items-center justify-center ">
-            <h1 className="text-6xl">Content Comming Soon</h1>
+        <div className="">
+
+        <Hero></Hero>
+
+
+            {/* <h1 className="text-6xl">Content Comming Soon</h1>
             <div className="">
                 <img
                     src="/logo/logo-removebg.png"
@@ -12,7 +17,7 @@ export default function Home() {
                 />
 
                 
-            </div>
+            </div> */}
         </div>
     );
 }
