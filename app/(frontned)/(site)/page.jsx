@@ -10,6 +10,8 @@ export default function Home() {
                     alt="SkillBridge Logo"
                     className="h-60 w-60 object-contain"
                 />
+
+                
             </div>
         </div>
     );
