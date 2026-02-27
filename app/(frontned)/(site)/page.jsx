@@ -1,18 +1,15 @@
 import Image from "next/image";
+import Hero from '@/app/components/home/Hero';
+import Ecosystem from "@/app/components/home/Ecosystem";
+import Stats from "@/app/components/home/Stats";
 
 export default function Home() {
     return (
-        <div className="flex-col flex min-h-screen items-center justify-center ">
-            <h1 className="text-6xl">Content Comming Soon</h1>
-            <div className="">
-                <img
-                    src="/logo/logo-removebg.png"
-                    alt="SkillBridge Logo"
-                    className="h-60 w-60 object-contain"
-                />
+        <div className="">
 
-                
-            </div>
+        <Hero></Hero>
+        <Ecosystem></Ecosystem>
+        <Stats></Stats>
         </div>
     );
 }
