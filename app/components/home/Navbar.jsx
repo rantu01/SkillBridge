@@ -1,13 +1,14 @@
+import Link from 'next/link';
 import React from 'react';
 
 const Navbar = () => {
     return (
 
-        <div className='w-full px-8 bg-white border-b border-gray-100 shadow-sm'>
+        <div className='w-full px-8 bg-[#fcf7f7] border-b border-gray-100 shadow-sm'>
 
             <nav className="max-w-6xl mx-auto flex items-center justify-between ">
                 {/* Left Side: Logo */}
-                <div className="flex items-center gap-2 cursor-pointer">
+                <Link href="/"><div className="flex items-center gap-2 cursor-pointer">
 
                     <div className="">
                         <img
@@ -16,13 +17,14 @@ const Navbar = () => {
                             className="h-22 w-22 object-contain"
                         />
                     </div>
-                </div>
+                </div></Link>
+
 
                 {/* Center: Navigation Links */}
                 <div className="hidden md:flex items-center gap-8">
-                    <a href="#" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">How it Works</a>
-                    <a href="#" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Safety Rules</a>
-                    <a href="#" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Leaderboard</a>
+                    <a href="HowItWorks" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">How it Works</a>
+                    <a href="/about" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">About </a>
+                    <a href="SafetyRules" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">Safety Rules</a>
                 </div>
 
                 {/* Right Side: Auth Buttons */}
