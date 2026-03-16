@@ -32,7 +32,7 @@ const Navbar = () => {
             if (result.isConfirmed) {
                 try {
                     await signOut(auth);
-                    
+
                     // --- Success Toast/Alert ---
                     Swal.fire({
                         icon: 'success',
@@ -41,8 +41,8 @@ const Navbar = () => {
                         showConfirmButton: false,
                         timer: 1500
                     });
-                    
-                    router.push('/');
+
+                    router.push('/dashboard');
                 } catch (error) {
                     Swal.fire('Error!', 'Logout failed. Please try again.', 'error');
                 }
@@ -75,6 +75,8 @@ const Navbar = () => {
                 <div className="flex items-center gap-6">
                     {user ? (
                         <>
+
+                            
                             <Link href="/dashboard" className="text-sm font-semibold text-gray-600 hover:text-gray-900">
                                 Dashboard
                             </Link>
