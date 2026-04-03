@@ -100,7 +100,20 @@ export async function POST(request) {
             user.photoURL = updateData.photoURL;
         }
 
+        const skillsRaw = formData.get('skills');
+        console.log(`[UpdateProfile] skillsRaw received:`, skillsRaw);
+        if (skillsRaw !== null) {
+            try {
+                const parsedSkills = JSON.parse(skillsRaw);
+                console.log(`[UpdateProfile] Parsed skills:`, parsedSkills);
+                user.skills = parsedSkills;
+            } catch (e) {
+                console.error('[UpdateProfile] Error parsing skills:', e);
+            }
+        }
+
         const savedUser = await user.save();
+        console.log(`[UpdateProfile] Save successful! DB user skills:`, savedUser.skills);
         console.log(`[UpdateProfile] Save successful! DB now has displayName: "${savedUser.displayName}"`);
 
         return NextResponse.json({
