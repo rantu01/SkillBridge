@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { auth } from '@/app/(backend)/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Swal from 'sweetalert2';
+import Link from 'next/link';
 
 const ProfilePage = () => {
     const [user, setUser] = useState(null);
@@ -21,6 +22,10 @@ const ProfilePage = () => {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [photoAction, setPhotoAction] = useState('update'); // 'update' or 'delete_photo'
     const [saving, setSaving] = useState(false);
+    const [skills, setSkills] = useState([]);
+    const [newSkill, setNewSkill] = useState('');
+    const [recentPosts, setRecentPosts] = useState([]);
+    const [loadingPosts, setLoadingPosts] = useState(false);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -43,6 +48,8 @@ const ProfilePage = () => {
                     if (data.success && data.user) {
                         setUser(data.user);
                         setDisplayName(data.user.displayName || '');
+                        setSkills(data.user.skills || []);
+                        fetchRecentPosts(currentUser.uid);
                     } else {
                         console.warn('[SyncUser] Failed or no user data, falling back to Firebase Auth');
                         setUser(currentUser);
@@ -91,6 +98,7 @@ const ProfilePage = () => {
             if (selectedFile) {
                 formData.append('file', selectedFile);
             }
+            formData.append('skills', JSON.stringify(skills));
 
             const res = await fetch('/api/update-profile', {
                 method: 'POST',
@@ -107,6 +115,7 @@ const ProfilePage = () => {
                 };
                 setUser(updatedUser);
                 setDisplayName(data.user.displayName || '');
+                setSkills(data.user.skills || []);
                 setIsEditing(false);
                 setSelectedFile(null);
                 setPreviewUrl(null);
@@ -154,6 +163,44 @@ const ProfilePage = () => {
             setSaving(false);
         }
     };
+
+    const fetchRecentPosts = async (uid) => {
+        setLoadingPosts(true);
+        try {
+            const res = await fetch(`/api/services/me?uid=${uid}`);
+            const data = await res.json();
+            if (data.success) {
+                // Return only first 3 for the sidebar view
+                setRecentPosts(data.services.slice(0, 3));
+            }
+        } catch (error) {
+            console.error("Error fetching recent posts:", error);
+        } finally {
+            setLoadingPosts(false);
+        }
+    };
+
+    const handleAddSkill = (e) => {
+        if (e) e.preventDefault();
+        if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+            setSkills([...skills, newSkill.trim()]);
+            setNewSkill('');
+        }
+    };
+
+    const handleRemoveSkill = (skillToRemove) => {
+        setSkills(skills.filter(skill => skill !== skillToRemove));
+    };
+
+    const skillColors = [
+        'bg-blue-50 text-blue-700 border-blue-100',
+        'bg-purple-50 text-purple-700 border-purple-100',
+        'bg-orange-50 text-orange-700 border-orange-100',
+        'bg-green-50 text-green-700 border-green-100',
+        'bg-red-50 text-red-700 border-red-100',
+        'bg-cyan-50 text-cyan-700 border-cyan-100',
+        'bg-teal-50 text-teal-700 border-teal-100',
+    ];
 
     if (loading) {
         return (
@@ -328,9 +375,10 @@ const ProfilePage = () => {
                             >
                                 <Edit3 size={20} /> Edit Profile
                             </button>
-                            <button className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
+                            <Link href={'/profile/my-services'}><button className="px-6 py-3 rounded-2xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
                                 Post Service
-                            </button>
+                            </button></Link>
+
                         </>
                     )}
                 </div>
@@ -348,22 +396,50 @@ const ProfilePage = () => {
                                 <div className="p-2 bg-purple-50 rounded-xl text-purple-600"><Zap size={20} /></div>
                                 <h2 className="text-xl font-black text-gray-800">Skills & Expertise</h2>
                             </div>
-                            <button className="text-blue-600 font-bold text-sm hover:underline">Manage Skills</button>
+                            {!isEditing && (
+                                <button className="text-blue-600 font-bold text-sm hover:underline" onClick={() => setIsEditing(true)}>Manage Skills</button>
+                            )}
                         </div>
+
+                        {isEditing && (
+                            <form onSubmit={handleAddSkill} className="mb-6 flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newSkill}
+                                    onChange={(e) => setNewSkill(e.target.value)}
+                                    placeholder="Add a new skill (e.g. Graphic Design)"
+                                    className="flex-1 px-4 py-3 rounded-xl border border-gray-100 focus:border-blue-500 outline-none text-sm transition-all bg-gray-50/50"
+                                />
+                                <button
+                                    type="submit"
+                                    className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-100 flex items-center gap-2"
+                                >
+                                    <Plus size={18} /> Add
+                                </button>
+                            </form>
+                        )}
+
                         <div className="flex flex-wrap gap-3">
-                            {[
-                                { name: 'Python Development', color: 'bg-blue-50 text-blue-700 border-blue-100' },
-                                { name: 'UI/UX Design', color: 'bg-purple-50 text-purple-700 border-purple-100' },
-                                { name: 'Academic Writing', color: 'bg-orange-50 text-orange-700 border-orange-100' },
-                                { name: 'Calculus Tutoring', color: 'bg-green-50 text-green-700 border-green-100' },
-                                { name: 'Spanish (Fluent)', color: 'bg-red-50 text-red-700 border-red-100' },
-                                { name: 'React.js', color: 'bg-cyan-50 text-cyan-700 border-cyan-100' },
-                                { name: 'Data Analysis', color: 'bg-teal-50 text-teal-700 border-teal-100' },
-                            ].map((skill, i) => (
-                                <span key={i} className={`px-4 py-2 rounded-xl text-sm font-bold border ${skill.color}`}>
-                                    {skill.name}
-                                </span>
-                            ))}
+                            {skills.length > 0 ? (
+                                skills.map((skill, i) => (
+                                    <div
+                                        key={i}
+                                        className={`px-4 py-2 rounded-xl text-sm font-bold border flex items-center gap-2 group transition-all ${skillColors[i % skillColors.length]}`}
+                                    >
+                                        {skill}
+                                        {isEditing && (
+                                            <button
+                                                onClick={() => handleRemoveSkill(skill)}
+                                                className="hover:bg-black/5 rounded-full p-0.5 transition-colors"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-gray-400 font-medium italic py-4">No skills added yet. Click edit to add your expertises!</p>
+                            )}
                         </div>
                     </div>
 
@@ -418,34 +494,45 @@ const ProfilePage = () => {
                         <div className="absolute top-8 right-8 p-2 bg-white/20 rounded-xl"><Zap size={20} /></div>
                     </div>
 
-                    {/* 5. Recent Transactions (Sidebar style) */}
+                    {/* 5. Recent Posts (Sidebar style) */}
                     <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-50">
                         <h2 className="text-xl font-black text-gray-800 mb-6 flex items-center gap-2">
-                            Recent Transactions
+                            Recent Posts
                         </h2>
                         <div className="space-y-6">
-                            {[
-                                { name: 'Python Tutoring', date: 'Oct 24', delta: '+300', icon: <ArrowUpRight className="text-green-500" />, bg: 'bg-green-50' },
-                                { name: 'Campus Cafe', date: 'Oct 22', delta: '-45', icon: <ArrowDownRight className="text-red-500" />, bg: 'bg-red-50' },
-                                { name: 'Logo Design Pack', date: 'Oct 20', delta: '+1.2k', icon: <ArrowUpRight className="text-green-500" />, bg: 'bg-green-50' },
-                            ].map((tx, i) => (
-                                <div key={i} className="flex items-center justify-between group cursor-pointer">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`p-2.5 rounded-xl ${tx.bg}`}>{tx.icon}</div>
-                                        <div>
-                                            <h4 className="font-bold text-gray-800 text-sm">{tx.name}</h4>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase">{tx.date} • {tx.delta} credits</p>
-                                        </div>
-                                    </div>
-                                    <span className={`font-black text-sm ${tx.delta.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                                        {tx.delta}
-                                    </span>
+                            {loadingPosts ? (
+                                <div className="flex flex-col items-center py-8 opacity-50">
+                                    <Loader2 className="animate-spin text-blue-600 mb-2" size={24} />
+                                    <p className="text-xs font-bold uppercase tracking-wider">Loading posts...</p>
                                 </div>
-                            ))}
+                            ) : recentPosts.length > 0 ? (
+                                recentPosts.map((post, i) => (
+                                    <div key={i} className="flex items-center justify-between group cursor-pointer">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-2.5 rounded-xl bg-blue-50`}>
+                                                <Zap className="text-blue-500" size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{post.title}</h4>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase">
+                                                    {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} • {post.category}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span className={`font-black text-sm text-blue-600`}>
+                                            {post.price}
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-6">
+                                    <p className="text-gray-400 text-sm italic">No posts found.</p>
+                                </div>
+                            )}
                         </div>
-                        <button className="w-full mt-8 py-3 text-gray-400 font-black text-xs uppercase tracking-widest hover:text-blue-600 transition-all border-t border-gray-50 pt-6">
-                            View Statement
-                        </button>
+                        <Link href="/profile/my-services" className="block w-full mt-8 py-3 text-center text-gray-400 font-black text-xs uppercase tracking-widest hover:text-blue-600 transition-all border-t border-gray-50 pt-6">
+                            All Posts
+                        </Link>
                     </div>
 
                     {/* 6. Mini Stats Footer */}

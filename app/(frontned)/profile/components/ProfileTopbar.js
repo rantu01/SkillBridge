@@ -79,24 +79,12 @@ const ProfileTopbar = () => {
                     >
                         Profile
                     </Link>
-                    <Link
-                        href="/profile/marketplace"
-                        className="whitespace-nowrap text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors pb-1 border-b-2 border-transparent hover:border-blue-600"
-                    >
-                        Marketplace
-                    </Link>
 
                     <Link
                         href="/profile/my-services"
                         className="whitespace-nowrap text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors pb-1 border-b-2 border-transparent hover:border-blue-600"
                     >
                         My Services
-                    </Link>
-                    <Link
-                        href="/profile/community"
-                        className="whitespace-nowrap text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors pb-1 border-b-2 border-transparent hover:border-blue-600"
-                    >
-                        Community
                     </Link>
                     <Link
                         href="/profile/student-verification"

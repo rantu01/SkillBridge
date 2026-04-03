@@ -3,7 +3,7 @@ import ProfileTopbar from "./components/ProfileTopbar";
 
 export default function ProfileLayout({ children }) {
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
+        <div className="min-h-screen    ">
             {/* Custom Profile Topbar */}
             <ProfileTopbar />
 

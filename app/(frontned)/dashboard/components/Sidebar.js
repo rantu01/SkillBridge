@@ -1,13 +1,14 @@
 import Link from 'next/link';
-import { Home, User, Settings, ShoppingBag, LogOut } from 'lucide-react'; // lucide-react install thakle bhalo, na hole normal text use koren
+import { Home, User, Settings, ShoppingBag, LogOut, Store, Users } from 'lucide-react'; // lucide-react install thakle bhalo, na hole normal text use koren
 
 const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', icon: <Home size={20} />, href: '/dashboard' },
-    { name: 'Profile', icon: <User size={20} />, href: '/dashboard/profile' },
+    { name: 'Profile', icon: <User size={20} />, href: '/profile' },
     { name: 'My Trades', icon: <ShoppingBag size={20} />, href: '/dashboard/trades' },
     { name: 'Settings', icon: <Settings size={20} />, href: '/dashboard/settings' },
-    { name: 'Profile', icon: <User size={20} />, href: '/profile' },
+    { name: 'Marketplace', icon: <Store size={20} />, href: '/profile/marketplace' },
+    { name: 'Community', icon: <Users size={20} />, href: '/community' },
   ];
 
   return (
@@ -17,11 +18,11 @@ const Sidebar = () => {
           <h2 className="text-2xl font-bold text-blue-600">SkillBridge</h2>
         </Link>
       </div>
-      
+
       <nav className="flex-1 px-4 space-y-2 mt-4">
         {menuItems.map((item) => (
-          <Link 
-            key={item.name} 
+          <Link
+            key={item.name}
             href={item.href}
             className="flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all font-medium"
           >
