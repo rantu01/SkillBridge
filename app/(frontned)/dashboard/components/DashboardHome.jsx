@@ -1,8 +1,45 @@
-import React from 'react';
-import { Star, ArrowRight, Download, Calendar, DollarSign, Award } from 'lucide-react';
+"use client"
+import React, { useState, useEffect } from 'react';
+import { Star, ArrowRight, Download, Calendar, DollarSign, Award, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { auth } from '@/app/(backend)/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const DashboardHome = () => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                try {
+                    const res = await fetch(`/api/sync-user`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            uid: currentUser.uid,
+                            email: currentUser.email,
+                            displayName: currentUser.displayName,
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success && data.user) {
+                        setUser(data.user);
+                    } else {
+                        setUser(currentUser);
+                    }
+                } catch (error) {
+                    console.error("Error syncing user:", error);
+                    setUser(currentUser);
+                }
+            } else {
+                setUser(null);
+            }
+            setLoading(false);
+        });
+        return unsubscribe;
+    }, []);
+
     const stats = [
         { label: 'Active Bookings', value: '04', change: '+1 from last week', icon: <Calendar className="text-blue-500" />, bg: 'bg-blue-50' },
         { label: 'Total Revenue', value: '1,250 Cr', change: 'Top 5% Earners', icon: <DollarSign className="text-purple-500" />, bg: 'bg-purple-50' },
@@ -16,12 +53,22 @@ const DashboardHome = () => {
         { title: 'Basic Photography & Editing', author: 'Sarah L.', price: '50', rating: '4.7(5)', tag: 'MEDIA', color: 'bg-teal-600' },
     ];
 
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-96 w-full">
+                <Loader2 className="animate-spin text-blue-600" size={48} />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-10 pb-10 mt-100">
             {/* --- Welcome Header --- */}
-            <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-50">
-                <h1 className="text-4xl font-extrabold text-gray-900">Welcome back, Alex! 👋</h1>
-                <p className="text-gray-500 mt-2 text-lg">
+            <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-50 uppercase">
+                <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">
+                    Welcome back, <span className="text-blue-600">{user?.displayName?.split(' ')[0] || 'User'}</span>! 👋
+                </h1>
+                <p className="text-gray-500 mt-2 text-lg normal-case">
                     You have <span className="text-blue-600 font-bold underline">2 new requests</span> and your "React Tutoring" service is trending this week.
                 </p>
             </div>
@@ -62,7 +109,7 @@ const DashboardHome = () => {
                             <div className={`h-32 ${item.color} relative p-4 uppercase text-[10px] font-black text-white`}>
                                 <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-md">{item.tag}</span>
                                 <div className="absolute inset-0 flex items-center justify-center opacity-20 text-white font-bold text-center p-2">
-                                   [Illustration Placeholder]
+                                    [Illustration Placeholder]
                                 </div>
                             </div>
                             <div className="p-5 space-y-3">
