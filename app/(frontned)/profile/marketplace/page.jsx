@@ -1,6 +1,7 @@
-'use client';
+ 'use client';
 
 import React, { useEffect, useState } from 'react';
+import BookingForm from '@/app/components/booking/BookingForm';
 import {
   Search, Star, ShieldCheck, ChevronLeft,
   ChevronRight, BookOpen, PenTool, FileText,
@@ -22,6 +23,7 @@ const MarketplacePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+    const [selectedService, setSelectedService] = useState(null);
 
   useEffect(() => {
     fetchServices();
@@ -99,7 +101,7 @@ const MarketplacePage = () => {
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-          {loading ? (
+            {loading ? (
             <div className="col-span-full py-20 flex flex-col items-center justify-center space-y-4">
               <div className="w-10 h-10 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
             </div>
@@ -155,12 +157,29 @@ const MarketplacePage = () => {
                       </div>
                       <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-0.5">Per Session</div>
                     </div>
+                    </div>
+                  
+                  <div className="mt-6 flex justify-end">
+                    <button onClick={() => setSelectedService(service)} className="px-4 py-2 bg-[#0052CC] text-white rounded-2xl font-bold hover:bg-blue-700 transition-all">Book</button>
                   </div>
                 </div>
               </div>
             ))
           )}
         </div>
+
+        {/* Booking Modal */}
+        {selectedService && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold">Request Booking for {selectedService.title}</h3>
+                <button onClick={() => setSelectedService(null)} className="text-gray-500">Close</button>
+              </div>
+              <BookingForm service={selectedService} />
+            </div>
+          </div>
+        )}
 
         {/* Pagination */}
         <div className="flex justify-center items-center gap-3 mt-24">
