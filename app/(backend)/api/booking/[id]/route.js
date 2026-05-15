@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import Booking from '@/app/(backend)/models/Booking';
 
+const appendEvent = (booking, type, actorID = null, message = '', meta = {}) => {
+    booking.events = booking.events || [];
+    booking.events.push({
+        type,
+        actorID,
+        message,
+        meta,
+        createdAt: new Date()
+    });
+};
+
 const allowedTransitions = {
     Pending: ['Approved'],
     Approved: ['In Progress'],
@@ -42,6 +53,12 @@ export async function PUT(request, { params }) {
         if (meetLink) {
             booking.meetLink = meetLink;
         }
+
+        appendEvent(booking, 'status_changed', actorID || null, `Status updated to ${newStatus}`, {
+            newStatus,
+            meetLink: Boolean(meetLink)
+        });
+
         await booking.save();
 
         const bookingOut = { ...booking.toObject(), _id: booking._id.toString(), timeSlot: booking.timeSlot ? new Date(booking.timeSlot).toISOString() : null };

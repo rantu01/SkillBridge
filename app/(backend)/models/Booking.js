@@ -7,10 +7,26 @@ const BookingSchema = new mongoose.Schema({
     timeSlot: { type: Date, required: true },
     status: {
         type: String,
-        enum: ['Pending', 'Approved', 'In Progress', 'Completed'],
+        enum: ['Pending', 'Approved', 'In Progress', 'Completed', 'Rejected'],
         default: 'Pending'
     },
-    meetLink: { type: String, default: null }
+    meetLink: { type: String, default: null },
+    events: {
+        type: [
+            {
+                type: { type: String, required: true },
+                actorID: { type: String, default: null },
+                message: { type: String, default: '' },
+                meta: { type: Object, default: {} },
+                createdAt: { type: Date, default: Date.now }
+            }
+        ],
+        default: []
+    },
+    reviewedBy: { type: String, default: null },
+    reviewedAt: { type: Date, default: null },
+    rejectionReason: { type: String, default: null },
+    autoApproved: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.models.Booking || mongoose.model('Booking', BookingSchema);

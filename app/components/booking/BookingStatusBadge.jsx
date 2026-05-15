@@ -5,6 +5,14 @@ import React from 'react';
 const steps = ['Pending', 'Approved', 'In Progress', 'Completed'];
 
 const BookingStatusBadge = ({ status }) => {
+    if (status === 'Rejected') {
+        return (
+            <div className="inline-flex items-center px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold">
+                Rejected
+            </div>
+        );
+    }
+
     const idx = steps.indexOf(status);
 
     return (

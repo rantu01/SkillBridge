@@ -38,10 +38,10 @@ const Sidebar = () => {
     { name: 'Dashboard', icon: <Home size={20} />, href: '/dashboard' },
     { name: 'Profile', icon: <User size={20} />, href: '/profile' },
     { name: 'Sessions', icon: <Video size={20} />, href: '/dashboard/sessions' },
-    { name: 'My Trades', icon: <ShoppingBag size={20} />, href: '/dashboard/trades' },
-    { name: 'Settings', icon: <Settings size={20} />, href: '/dashboard/settings' },
+    // { name: 'My Trades', icon: <ShoppingBag size={20} />, href: '/dashboard/trades' },
+    // { name: 'Settings', icon: <Settings size={20} />, href: '/dashboard/settings' },
     { name: 'Marketplace', icon: <Store size={20} />, href: '/profile/marketplace' },
-    { name: 'Community', icon: <Users size={20} />, href: '/community' },
+    // { name: 'Community', icon: <Users size={20} />, href: '/community' },
   ];
 
   return (
