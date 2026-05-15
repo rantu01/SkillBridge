@@ -14,6 +14,8 @@ import { auth } from '@/app/(backend)/lib/firebase';
 import Swal from 'sweetalert2';
 import Image from 'next/image'; // Next.js Image component use kora bhalo
 
+const ADMIN_EMAIL = 'admin@admin.com';
+
 const Hero = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -27,8 +29,10 @@ const Hero = () => {
     // --- Check if User is Logged In ---
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            // Check if user is logged in AND email is verified
-            if (currentUser && currentUser.emailVerified) {
+            const isAdminUser = currentUser?.email?.toLowerCase() === ADMIN_EMAIL;
+
+            // Check if user is logged in AND email is verified, or is the admin account
+            if (currentUser && (currentUser.emailVerified || isAdminUser)) {
                 setUser(currentUser);
             } else {
                 setUser(null);
@@ -43,8 +47,9 @@ const Hero = () => {
         setLoading(true);
         try {
             const result = await signInWithPopup(auth, googleProvider);
+            const isAdminUser = result.user?.email?.toLowerCase() === ADMIN_EMAIL;
             Swal.fire({ icon: 'success', title: 'Google Login Successful!', timer: 1400, showConfirmButton: false });
-            setTimeout(() => router.push('/dashboard'), 700);
+            setTimeout(() => router.push(isAdminUser ? '/admin' : '/dashboard'), 700);
         } catch (err) {
             Swal.fire({ icon: 'error', title: 'Google login failed or cancelled.' });
         } finally {
@@ -60,8 +65,9 @@ const Hero = () => {
             if (isLogin) {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
+                const isAdminUser = user.email?.toLowerCase() === ADMIN_EMAIL;
 
-                if (!user.emailVerified) {
+                if (!user.emailVerified && !isAdminUser) {
                     await signOut(auth);
                     Swal.fire({
                         icon: 'warning',
@@ -89,6 +95,10 @@ const Hero = () => {
                     timer: 2000,
                     showConfirmButton: false
                 });
+
+                if (isAdminUser) {
+                    router.push('/admin');
+                }
 
             } else {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -144,10 +154,10 @@ const Hero = () => {
                             <h2 className="mt-6 text-2xl font-bold text-gray-800">Welcome Back!</h2>
                             <p className="text-gray-500 mt-2">You are securely logged in.</p>
                             <button 
-                                onClick={() => router.push('/dashboard')} // Example redirect
+                                onClick={() => router.push(user?.email?.toLowerCase() === ADMIN_EMAIL ? '/admin' : '/dashboard')}
                                 className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all"
                             >
-                                Go to Dashboard
+                                {user?.email?.toLowerCase() === ADMIN_EMAIL ? 'Go to Admin Panel' : 'Go to Dashboard'}
                             </button>
                         </div>
                     ) : (
