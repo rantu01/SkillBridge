@@ -5,6 +5,7 @@ import {
     createUserWithEmailAndPassword,
     onAuthStateChanged, // Added this to check login status
     GoogleAuthProvider,
+    signInWithPopup,
     sendEmailVerification,
     signOut
 } from 'firebase/auth';
@@ -21,7 +22,7 @@ const Hero = () => {
     const [user, setUser] = useState(null); // User state
     const router = useRouter();
 
-    const nwuEmailRegex = /^[0-9]{11}@nwu\.ac\.bd$/;
+    // allow any valid email (HTML `type="email"` enforces basic format)
 
     // --- Check if User is Logged In ---
     useEffect(() => {
@@ -36,20 +37,24 @@ const Hero = () => {
         return () => unsubscribe();
     }, []);
 
+    const googleProvider = new GoogleAuthProvider();
+
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        try {
+            const result = await signInWithPopup(auth, googleProvider);
+            Swal.fire({ icon: 'success', title: 'Google Login Successful!', timer: 1400, showConfirmButton: false });
+            setTimeout(() => router.push('/dashboard'), 700);
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Google login failed or cancelled.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
-
-        if (!nwuEmailRegex.test(email)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Email Format',
-                text: 'You must use your student email (e.g., 20241080010@nwu.ac.bd)',
-                confirmButtonColor: '#2563EB'
-            });
-            setLoading(false);
-            return;
-        }
 
         try {
             if (isLogin) {
@@ -61,7 +66,7 @@ const Hero = () => {
                     Swal.fire({
                         icon: 'warning',
                         title: 'Email Not Verified!',
-                        text: 'Please check your NWU email and click the verification link before logging in.',
+                        text: 'Please check your email and click the verification link before logging in.',
                         showCancelButton: true,
                         confirmButtonText: 'Resend Link',
                         confirmButtonColor: '#2563EB',
@@ -89,18 +94,18 @@ const Hero = () => {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 await sendEmailVerification(userCredential.user);
                 await signOut(auth);
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Account Created!',
-                    text: 'A verification link has been sent to your NWU email.',
+                    text: 'A verification link has been sent to your email.',
                     confirmButtonColor: '#2563EB'
                 });
                 setIsLogin(true);
             }
         } catch (err) {
             let msg = "An error occurred. Please try again.";
-            if (err.code === 'auth/email-already-in-use') msg = "This ID is already registered!";
+            if (err.code === 'auth/email-already-in-use') msg = "This email is already registered!";
             if (err.code === 'auth/invalid-credential') msg = "Wrong email or password.";
 
             Swal.fire({ icon: 'error', title: 'Oops!', text: msg });
@@ -155,11 +160,11 @@ const Hero = () => {
 
                             <form className="space-y-5 w-full" onSubmit={handleSubmit}>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 ml-1 uppercase">NWU Student Email</label>
+                                    <label className="text-xs font-bold text-gray-400 ml-1 uppercase">Email</label>
                                     <input
                                         type="email" required value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="20241080010@nwu.ac.bd"
+                                        placeholder="you@example.com"
                                         className="w-full px-4 py-4 mt-1 rounded-xl bg-[#F8FAFC] border border-gray-100 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                                     />
                                 </div>
@@ -179,6 +184,22 @@ const Hero = () => {
                                 >
                                     {loading ? 'Processing...' : (isLogin ? 'Login Now' : 'Send Verification Link')}
                                 </button>
+                                <div className="mt-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleGoogleLogin}
+                                        disabled={loading}
+                                        className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-gray-700 font-semibold flex items-center justify-center gap-3 mt-2 hover:shadow-sm"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 533.5 544.3" className="w-5 h-5">
+                                            <path fill="#4285f4" d="M533.5 278.4c0-17.5-1.5-34.3-4.3-50.6H272v95.6h147.4c-6.4 34.6-25 63.9-53.6 83.6v69.3h86.6c50.6-46.6 81.1-115.2 81.1-198z"/>
+                                            <path fill="#34a853" d="M272 544.3c72.6 0 133.6-24 178.1-65.2l-86.6-69.3c-24.1 16.2-55 25.7-91.5 25.7-70 0-129.3-47.4-150.5-111.2H30.8v69.9C74.8 482.1 167.8 544.3 272 544.3z"/>
+                                            <path fill="#fbbc04" d="M121.5 325.5c-10.8-32.5-10.8-67.5 0-100l-90.7-70.1C7 205.4 0 238.3 0 272s7 66.6 30.8 116.6l90.7-63.1z"/>
+                                            <path fill="#ea4335" d="M272 109.7c38.5 0 73 13.3 100.3 39.4l75.1-75.1C405.6 27.4 347.6 0 272 0 167.8 0 74.8 62.2 30.8 157.6l90.7 70.1C142.7 157.1 202 109.7 272 109.7z"/>
+                                        </svg>
+                                        Continue with Google
+                                    </button>
+                                </div>
                             </form>
                         </>
                     )}
