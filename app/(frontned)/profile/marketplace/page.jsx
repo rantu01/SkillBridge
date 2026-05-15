@@ -12,6 +12,7 @@ import {
 const categories = [
   { id: 'Tutoring', icon: BookOpen, color: 'text-blue-500' },
   { id: 'Development', icon: Terminal, color: 'text-indigo-500' },
+  { id: 'Media', icon: Terminal, color: 'text-indigo-500' },
   { id: 'Design', icon: PenTool, color: 'text-pink-500' },
   { id: 'Notes', icon: FileText, color: 'text-orange-500' },
   { id: 'Tech', icon: Terminal, color: 'text-indigo-500' },
