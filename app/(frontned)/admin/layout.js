@@ -2,9 +2,11 @@ import AdminSidebar from './components/AdminSidebar';
 import AdminTopbar from './components/AdminTopbar';
 import AuthGuard from '../dashboard/components/AuthGuard';
 
+const ADMIN_EMAILS = ['admin@admin.com'];
+
 export default function AdminLayout({ children }) {
   return (
-    <AuthGuard>
+    <AuthGuard allowedEmails={ADMIN_EMAILS} redirectTo="/">
       <div className="min-h-screen bg-[#F8FAFC]">
         {/* Sidebar - Fixed on Left */}
         <AdminSidebar />
