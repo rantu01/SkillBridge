@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import Booking from '@/app/(backend)/models/Booking';
+import Service from '@/app/(backend)/models/Service';
+import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
+import { applyCreditDelta, createCreditTransaction, CREDIT_TRANSACTION_TYPES } from '@/app/(backend)/lib/credits';
 
 const AUTO_APPROVE_BOOKINGS = process.env.AUTO_APPROVE_BOOKINGS === 'true';
 
@@ -71,7 +74,13 @@ export async function GET(request) {
             ...b,
             requester: userMap[b.requesterID] || null,
             provider: userMap[b.providerID] || null,
-            service: serviceMap[b.serviceID] || null
+            service: serviceMap[b.serviceID] || null,
+            creditSummary: {
+                servicePrice: Number(serviceMap[b.serviceID]?.price || 0),
+                requesterDelta: ['Approved', 'In Progress', 'Completed'].includes(b.status) ? -Number(serviceMap[b.serviceID]?.price || 0) : 0,
+                providerDelta: b.status === 'Completed' ? Number(serviceMap[b.serviceID]?.price || 0) : 0,
+                settlement: b.status === 'Completed' ? 'completed' : b.status === 'Approved' ? 'reserved' : 'pending'
+            }
         }));
 
         return NextResponse.json({ success: true, bookings: enriched }, { status: 200 });
@@ -104,6 +113,26 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Booking time must be in the future' }, { status: 400 });
         }
 
+        const service = await Service.findById(serviceID).lean();
+        if (!service) {
+            return NextResponse.json({ error: 'Service not found' }, { status: 404 });
+        }
+
+        const requester = await FirebaseUser.findOne({ uid: requesterID });
+        if (!requester) {
+            return NextResponse.json({ error: 'Requester not found' }, { status: 404 });
+        }
+
+        const servicePrice = Number(service.price || 0);
+        const requesterCredits = Number(requester.credits || 0);
+        if (requesterCredits < servicePrice) {
+            return NextResponse.json({
+                error: 'Insufficient credits to request this booking',
+                requiredCredits: servicePrice,
+                currentCredits: requesterCredits
+            }, { status: 400 });
+        }
+
         const sameSlot = normalizedTimeSlot.toISOString();
         const duplicateBooking = await Booking.findOne({
             requesterID,
@@ -134,7 +163,8 @@ export async function POST(request) {
             status: AUTO_APPROVE_BOOKINGS ? 'Approved' : 'Pending',
             autoApproved: AUTO_APPROVE_BOOKINGS,
             reviewedAt: AUTO_APPROVE_BOOKINGS ? new Date() : null,
-            events: []
+            events: [],
+            creditEvents: []
         });
 
         appendEvent(
@@ -145,7 +175,58 @@ export async function POST(request) {
             { serviceID, requesterID, providerID, timeSlot: sameSlot }
         );
 
-        await newBooking.save();
+        if (AUTO_APPROVE_BOOKINGS) {
+            const requesterDebit = applyCreditDelta(
+                requester,
+                -servicePrice,
+                createCreditTransaction({
+                    type: CREDIT_TRANSACTION_TYPES.BOOKING_DEBIT,
+                    bookingID: newBooking._id.toString(),
+                    serviceID,
+                    actorID: requesterID,
+                    delta: -servicePrice,
+                    balanceBefore: requesterCredits,
+                    balanceAfter: requesterCredits - servicePrice,
+                    title: `Booking approved: ${service.title}`,
+                    note: 'Credits reserved automatically on booking approval'
+                })
+            );
+
+            if (!requesterDebit.success) {
+                await Booking.findByIdAndDelete(newBooking._id);
+                return NextResponse.json({
+                    error: requesterDebit.error,
+                    requiredCredits: servicePrice,
+                    currentCredits: requesterCredits
+                }, { status: 400 });
+            }
+
+            newBooking.creditEvents = newBooking.creditEvents || [];
+            newBooking.creditEvents.unshift(createCreditTransaction({
+                type: CREDIT_TRANSACTION_TYPES.BOOKING_DEBIT,
+                bookingID: newBooking._id.toString(),
+                serviceID,
+                actorID: requesterID,
+                delta: -servicePrice,
+                balanceBefore: requesterDebit.balanceBefore,
+                balanceAfter: requesterDebit.balanceAfter,
+                title: `Booking approved: ${service.title}`,
+                note: 'Credits reserved automatically on booking approval'
+            }));
+        }
+
+        try {
+            await requester.save();
+            await newBooking.save();
+        } catch (saveError) {
+            if (AUTO_APPROVE_BOOKINGS) {
+                requester.credits = requesterCredits;
+                requester.creditTransactions = (requester.creditTransactions || []).filter((transaction) => transaction.bookingID !== newBooking._id.toString());
+                await requester.save();
+            }
+            await Booking.findByIdAndDelete(newBooking._id);
+            throw saveError;
+        }
 
         const bookingOut = { ...newBooking.toObject(), _id: newBooking._id.toString(), timeSlot: newBooking.timeSlot.toISOString() };
         return NextResponse.json({ success: true, booking: bookingOut }, { status: 201 });

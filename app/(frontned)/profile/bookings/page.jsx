@@ -155,6 +155,35 @@ const BookingsPage = () => {
                                 </div>
                             </div>
 
+                            <div className="mt-4 rounded-2xl border border-blue-50 bg-blue-50/50 p-4 text-sm text-slate-700">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Credit Transaction</p>
+                                {b.creditSummary?.settlement === 'pending' ? (
+                                    <p>No credit movement yet. This booking is still waiting for approval.</p>
+                                ) : user?.uid === b.requesterID ? (
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <p>
+                                            Booking price: <span className="font-black">{b.creditSummary?.servicePrice ?? b.service?.price ?? 0}</span> credits
+                                        </p>
+                                        <p className="font-bold">
+                                            You paid <span className="text-red-600">
+                                                -{b.creditSummary?.servicePrice ?? b.service?.price ?? 0}
+                                            </span> credits on this booking
+                                        </p>
+                                    </div>
+                                ) : b.status === 'Completed' ? (
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                        <p>
+                                            Booking price: <span className="font-black">{b.creditSummary?.servicePrice ?? b.service?.price ?? 0}</span> credits
+                                        </p>
+                                        <p className="font-bold">
+                                            You earned <span className="text-green-600">+{b.creditSummary?.servicePrice ?? b.service?.price ?? 0}</span> credits on this booking
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p>Credits are reserved for this booking and will be released to the provider after completion.</p>
+                                )}
+                            </div>
+
                             {/* Meet Link Input - provider can add link when editing (for Approved bookings or when started) */}
                             {editingMeetLink === b._id && user && user.uid === b.providerID && (
                                 <div className="mt-4 pt-4 border-t border-gray-200">

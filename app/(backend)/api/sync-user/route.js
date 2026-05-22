@@ -21,6 +21,8 @@ export async function POST(request) {
     if (user) {
       console.log(`[SyncUser] User found in DB. Current displayName: "${user.displayName}", photoURL: "${user.photoURL}"`);
       user.email = email;
+      user.credits = Number.isFinite(user.credits) ? user.credits : 0;
+      user.creditTransactions = Array.isArray(user.creditTransactions) ? user.creditTransactions : [];
       // We do NOT overwrite displayName, photoURL, or isVerified from the sync-user payload.
       // isVerified is controlled by the admin approval process.
       await user.save();
@@ -32,7 +34,9 @@ export async function POST(request) {
         email,
         displayName: displayName || '',
         photoURL: '',
-        isVerified: isVerified || false
+        isVerified: isVerified || false,
+        credits: 0,
+        creditTransactions: []
       });
     }
 

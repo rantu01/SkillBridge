@@ -7,11 +7,39 @@ import Swal from 'sweetalert2';
 
 const BookingForm = ({ service }) => {
     const [user, setUser] = useState(null);
+    const [creditBalance, setCreditBalance] = useState(0);
     const [dateTime, setDateTime] = useState('');
     const [loading, setLoading] = useState(false);
+    const servicePrice = Number(service?.price || 0);
+    const insufficientCredits = Boolean(user) && creditBalance < servicePrice;
 
     useEffect(() => {
-        const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+        const unsub = onAuthStateChanged(auth, async (u) => {
+            setUser(u);
+
+            if (!u?.uid) {
+                setCreditBalance(0);
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/sync-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uid: u.uid,
+                        email: u.email,
+                        displayName: u.displayName
+                    })
+                });
+                const data = await res.json();
+                if (data.success && data.user) {
+                    setCreditBalance(Number(data.user.credits || 0));
+                }
+            } catch (error) {
+                console.error('Error loading credit balance:', error);
+            }
+        });
         return unsub;
     }, []);
 
@@ -19,6 +47,13 @@ const BookingForm = ({ service }) => {
         e.preventDefault();
         if (!user) return Swal.fire({ icon: 'error', text: 'You must be signed in to request a booking.' });
         if (!dateTime) return Swal.fire({ icon: 'error', text: 'Please pick a date and time.' });
+        if (insufficientCredits) {
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Insufficient credits',
+                text: `You need ${servicePrice - creditBalance} more credits to request this booking.`,
+            });
+        }
 
         setLoading(true);
         try {
@@ -28,7 +63,7 @@ const BookingForm = ({ service }) => {
                 body: JSON.stringify({
                     serviceID: service._id || service.id,
                     requesterID: user.uid,
-                    providerID: service.ownerID || service.ownerID || service.owner || service.ownerID,
+                    providerID: service.ownerID || service.owner || '',
                     timeSlot: dateTime
                 })
             });
@@ -58,13 +93,25 @@ const BookingForm = ({ service }) => {
                 required
             />
 
+            <div className={`rounded-2xl border p-4 ${insufficientCredits ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-gray-100 bg-gray-50 text-gray-700'}`}>
+                <p className="text-xs font-black uppercase tracking-widest">Credit Check</p>
+                <p className="mt-1 text-sm font-medium">
+                    Your balance: <span className="font-black">{creditBalance}</span> credits. Booking cost: <span className="font-black">{servicePrice}</span> credits.
+                </p>
+                {insufficientCredits && (
+                    <p className="mt-2 text-sm font-bold">
+                        You need {servicePrice - creditBalance} more credits before you can request this booking.
+                    </p>
+                )}
+            </div>
+
             <div className="flex justify-end">
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || insufficientCredits}
                     className="bg-[#0052CC] text-white px-6 py-3 rounded-xl font-bold disabled:opacity-60"
                 >
-                    {loading ? 'Requesting...' : 'Request Booking'}
+                    {loading ? 'Requesting...' : insufficientCredits ? 'Insufficient Credits' : 'Request Booking'}
                 </button>
             </div>
         </form>

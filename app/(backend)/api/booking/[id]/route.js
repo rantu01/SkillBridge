@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import Booking from '@/app/(backend)/models/Booking';
+import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
+import Service from '@/app/(backend)/models/Service';
+import { applyCreditDelta, createCreditTransaction, CREDIT_TRANSACTION_TYPES } from '@/app/(backend)/lib/credits';
 
 const appendEvent = (booking, type, actorID = null, message = '', meta = {}) => {
     booking.events = booking.events || [];
@@ -49,6 +52,58 @@ export async function PUT(request, { params }) {
             return NextResponse.json({ error: `Invalid status transition from ${current} to ${newStatus}` }, { status: 400 });
         }
 
+        const service = await Service.findById(booking.serviceID).lean();
+        const servicePrice = Number(service?.price || 0);
+
+        let providerCreditRollback = null;
+        if (newStatus === 'Completed') {
+            const provider = await FirebaseUser.findOne({ uid: booking.providerID });
+            if (!provider) {
+                return NextResponse.json({ error: 'Provider not found' }, { status: 404 });
+            }
+
+            const providerCredits = Number(provider.credits || 0);
+            const providerCreditResult = applyCreditDelta(
+                provider,
+                servicePrice,
+                createCreditTransaction({
+                    type: CREDIT_TRANSACTION_TYPES.BOOKING_CREDIT,
+                    bookingID: booking._id.toString(),
+                    serviceID: booking.serviceID,
+                    actorID: actorID || booking.providerID,
+                    delta: servicePrice,
+                    balanceBefore: providerCredits,
+                    balanceAfter: providerCredits + servicePrice,
+                    title: `Booking completed: ${service?.title || 'Service'}`,
+                    note: 'Credits earned after completion confirmation'
+                })
+            );
+
+            if (!providerCreditResult.success) {
+                return NextResponse.json({ error: providerCreditResult.error }, { status: 400 });
+            }
+
+            providerCreditRollback = async () => {
+                provider.credits = providerCredits;
+                provider.creditTransactions = (provider.creditTransactions || []).filter((tx) => tx.bookingID !== booking._id.toString() || tx.type !== CREDIT_TRANSACTION_TYPES.BOOKING_CREDIT);
+                await provider.save();
+            };
+
+            await provider.save();
+            booking.creditEvents = booking.creditEvents || [];
+            booking.creditEvents.unshift(createCreditTransaction({
+                type: CREDIT_TRANSACTION_TYPES.BOOKING_CREDIT,
+                bookingID: booking._id.toString(),
+                serviceID: booking.serviceID,
+                actorID: actorID || booking.providerID,
+                delta: servicePrice,
+                balanceBefore: providerCreditResult.balanceBefore,
+                balanceAfter: providerCreditResult.balanceAfter,
+                title: `Booking completed: ${service?.title || 'Service'}`,
+                note: 'Credits earned after completion confirmation'
+            }));
+        }
+
         booking.status = newStatus;
         if (meetLink) {
             booking.meetLink = meetLink;
@@ -59,7 +114,14 @@ export async function PUT(request, { params }) {
             meetLink: Boolean(meetLink)
         });
 
-        await booking.save();
+        try {
+            await booking.save();
+        } catch (saveError) {
+            if (providerCreditRollback) {
+                await providerCreditRollback();
+            }
+            throw saveError;
+        }
 
         const bookingOut = { ...booking.toObject(), _id: booking._id.toString(), timeSlot: booking.timeSlot ? new Date(booking.timeSlot).toISOString() : null };
         return NextResponse.json({ success: true, booking: bookingOut }, { status: 200 });
