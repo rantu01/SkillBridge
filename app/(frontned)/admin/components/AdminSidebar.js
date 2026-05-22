@@ -14,8 +14,8 @@ const AdminSidebar = () => {
     { name: 'Dashboard', href: '/admin', icon: <LayoutDashboard size={20} /> },
     { name: 'Bookings', href: '/admin/bookings', icon: <CalendarDays size={20} /> },
     { name: 'User Management', href: '/admin/users', icon: <Users size={20} /> },
-    { name: 'Analytics', href: '/admin/analytics', icon: <BarChart3 size={20} /> },
-    { name: 'Settings', href: '/admin/settings', icon: <Settings size={20} /> },
+    // { name: 'Analytics', href: '/admin/analytics', icon: <BarChart3 size={20} /> },
+    // { name: 'Settings', href: '/admin/settings', icon: <Settings size={20} /> },
   ];
 
   return (

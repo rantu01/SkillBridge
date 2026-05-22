@@ -7,6 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import BookingStatusBadge from '@/app/components/booking/BookingStatusBadge';
 import { MessageSquarePlus } from 'lucide-react';
 import Swal from 'sweetalert2';
+import StarRating from '@/app/components/common/StarRating';
 
 const BookingsPage = () => {
     const [user, setUser] = useState(null);
@@ -16,6 +17,8 @@ const BookingsPage = () => {
     const [editingMeetLink, setEditingMeetLink] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [activeTab, setActiveTab] = useState('received');
+    const [reviewDrafts, setReviewDrafts] = useState({});
+    const [reviewSubmittingId, setReviewSubmittingId] = useState(null);
     const router = useRouter();
     const bookingsPerPage = 5;
 
@@ -122,6 +125,58 @@ const BookingsPage = () => {
         }
     };
 
+    const updateReviewDraft = (bookingId, field, value) => {
+        setReviewDrafts((previous) => ({
+            ...previous,
+            [bookingId]: {
+                rating: previous[bookingId]?.rating || 0,
+                feedback: previous[bookingId]?.feedback || '',
+                [field]: value
+            }
+        }));
+    };
+
+    const submitReview = async (booking) => {
+        if (!user) return;
+
+        const draft = reviewDrafts[booking._id] || {};
+        if (!draft.rating) {
+            Swal.fire({ icon: 'warning', text: 'Please choose a star rating before submitting.' });
+            return;
+        }
+
+        setReviewSubmittingId(booking._id);
+        try {
+            const res = await fetch('/api/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookingID: booking._id,
+                    reviewerID: user.uid,
+                    rating: draft.rating,
+                    feedback: draft.feedback || ''
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                Swal.fire({ icon: 'success', text: 'Review submitted' });
+                setReviewDrafts((previous) => {
+                    const next = { ...previous };
+                    delete next[booking._id];
+                    return next;
+                });
+                fetchBookings(user.uid);
+            } else {
+                Swal.fire({ icon: 'error', text: data.error || 'Failed to submit review' });
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire({ icon: 'error', text: 'Server error' });
+        } finally {
+            setReviewSubmittingId(null);
+        }
+    };
+
     if (loading) return <div className="py-20 text-center">Loading bookings...</div>;
 
     return (
@@ -224,6 +279,75 @@ const BookingsPage = () => {
                                             <p>Credits are reserved for this booking and will be released to the provider after completion.</p>
                                         )}
                                     </div>
+
+                                    {b.status === 'Completed' && b.review && (
+                                        <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm text-emerald-900">
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">Submitted Review</p>
+                                                    <p className="font-bold">Thank you for your feedback.</p>
+                                                </div>
+                                                <StarRating rating={b.review.rating} count={0} size={14} showValue={false} showCount={false} starClassName="text-emerald-500 fill-emerald-500" />
+                                            </div>
+                                            {b.review.feedback && <p className="mt-3 text-emerald-800/90 leading-relaxed">{b.review.feedback}</p>}
+                                        </div>
+                                    )}
+
+                                    {b.status === 'Completed' && user?.uid === b.requesterID && !b.review && (
+                                        <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50/80 p-4 text-sm text-amber-950">
+                                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Leave a Review</p>
+                                                    <p className="font-bold">Share how the completed session went.</p>
+                                                    <p className="text-amber-800/80 mt-1">Your feedback helps other students pick the right service.</p>
+                                                </div>
+                                                <div className="flex flex-col items-start sm:items-end gap-2">
+                                                    <StarRating
+                                                        rating={reviewDrafts[b._id]?.rating || 0}
+                                                        interactive
+                                                        onChange={(value) => updateReviewDraft(b._id, 'rating', value)}
+                                                        size={18}
+                                                        showValue={false}
+                                                        showCount={false}
+                                                        starClassName="text-amber-500 fill-amber-500"
+                                                    />
+                                                    <span className="text-xs font-bold text-amber-700">
+                                                        {reviewDrafts[b._id]?.rating ? `${reviewDrafts[b._id].rating}/5 selected` : 'Tap a star to rate'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <textarea
+                                                value={reviewDrafts[b._id]?.feedback || ''}
+                                                onChange={(e) => updateReviewDraft(b._id, 'feedback', e.target.value)}
+                                                rows={3}
+                                                placeholder="What stood out?"
+                                                className="mt-4 w-full rounded-2xl border border-amber-100 bg-white px-4 py-3 text-sm outline-none focus:border-amber-400"
+                                            />
+
+                                            <div className="mt-4 flex flex-wrap gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => submitReview(b)}
+                                                    disabled={reviewSubmittingId === b._id}
+                                                    className="rounded-xl bg-amber-500 px-4 py-2.5 font-bold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    {reviewSubmittingId === b._id ? 'Submitting...' : 'Submit Review'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setReviewDrafts((previous) => {
+                                                        const next = { ...previous };
+                                                        delete next[b._id];
+                                                        return next;
+                                                    })}
+                                                    className="rounded-xl border border-amber-200 px-4 py-2.5 font-bold text-amber-700 transition hover:bg-amber-100"
+                                                >
+                                                    Clear
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {editingMeetLink === b._id && user && user.uid === b.providerID && (
                                         <div className="mt-4 pt-4 border-t border-gray-200">

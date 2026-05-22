@@ -6,6 +6,7 @@ import { auth } from '@/app/(backend)/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import ServiceForm from '@/app/components/services/ServiceForm';
 import Swal from 'sweetalert2';
+import StarRating from '@/app/components/common/StarRating';
 
 const MyServicesPage = () => {
     const [services, setServices] = useState([]);
@@ -130,6 +131,26 @@ const MyServicesPage = () => {
                                 </div>
                                 <h3 className="text-xl font-black text-slate-800 mb-2 line-clamp-1">{service.title}</h3>
                                 <p className="text-slate-500 text-sm line-clamp-2 mb-6 font-medium">{service.description}</p>
+                                <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500">
+                                    <div className="flex items-center gap-2 text-amber-500">
+                                        <StarRating
+                                            rating={service.ratingSummary?.averageRating || 0}
+                                            count={service.ratingSummary?.reviewCount || 0}
+                                            size={14}
+                                            showValue={false}
+                                            showCount={false}
+                                            starClassName="text-amber-400 fill-amber-400"
+                                        />
+                                        <span>
+                                            {service.ratingSummary?.reviewCount > 0
+                                                ? `${service.ratingSummary.averageRating.toFixed(1)} average`
+                                                : 'No reviews yet'}
+                                        </span>
+                                    </div>
+                                    <span className="text-slate-400 uppercase tracking-widest text-[10px]">
+                                        {service.ratingSummary?.reviewCount || 0} ratings
+                                    </span>
+                                </div>
                                 <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
                                     <div className="flex items-center gap-1.5 text-blue-600 font-black text-xl">
                                         {service.price} <span className="text-[10px] uppercase text-gray-400 tracking-tighter">Credits</span>

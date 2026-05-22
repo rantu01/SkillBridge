@@ -8,6 +8,7 @@ import {
   Terminal, MoreHorizontal, LayoutGrid, Heart,
   Plus, CheckCircle2
 } from 'lucide-react';
+import StarRating from '@/app/components/common/StarRating';
 
 const categories = [
   { id: 'Tutoring', icon: BookOpen, color: 'text-blue-500' },
@@ -145,8 +146,20 @@ const MarketplacePage = () => {
                           {service.owner?.displayName || 'Student'} <CheckCircle2 size={12} className="text-[#4F46E5]" strokeWidth={3} />
                         </div>
                         <div className="flex items-center gap-1 text-[11px] text-slate-300 font-black">
-                          <Star size={11} className="fill-amber-400 text-amber-400" />
-                          4.9 (42)
+                          <StarRating
+                            rating={service.ratingSummary?.averageRating || 0}
+                            count={service.ratingSummary?.reviewCount || 0}
+                            size={11}
+                            className="gap-0.5"
+                            showValue={false}
+                            showCount={false}
+                            starClassName="text-amber-400 fill-amber-400"
+                          />
+                          {service.ratingSummary?.reviewCount > 0 ? (
+                            <span>{service.ratingSummary.averageRating.toFixed(1)} ({service.ratingSummary.reviewCount})</span>
+                          ) : (
+                            <span>New listing</span>
+                          )}
                         </div>
                       </div>
                     </div>

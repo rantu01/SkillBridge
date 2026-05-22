@@ -4,6 +4,7 @@ import Booking from '@/app/(backend)/models/Booking';
 import Service from '@/app/(backend)/models/Service';
 import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
 import { applyCreditDelta, createCreditTransaction, CREDIT_TRANSACTION_TYPES } from '@/app/(backend)/lib/credits';
+import { getBookingReviewMap } from '@/app/(backend)/lib/reviews';
 
 const AUTO_APPROVE_BOOKINGS = process.env.AUTO_APPROVE_BOOKINGS === 'true';
 
@@ -70,11 +71,14 @@ export async function GET(request) {
         const services = await Service.find({ _id: { $in: serviceIDs } }).lean();
         const serviceMap = services.reduce((acc, s) => { acc[s._id] = s; return acc; }, {});
 
+        const reviewMap = await getBookingReviewMap(bookings.map((booking) => booking._id));
+
         const enriched = bookings.map(b => ({
             ...b,
             requester: userMap[b.requesterID] || null,
             provider: userMap[b.providerID] || null,
             service: serviceMap[b.serviceID] || null,
+            review: reviewMap[b._id] || null,
             creditSummary: {
                 servicePrice: Number(serviceMap[b.serviceID]?.price || 0),
                 requesterDelta: ['Approved', 'In Progress', 'Completed'].includes(b.status) ? -Number(serviceMap[b.serviceID]?.price || 0) : 0,

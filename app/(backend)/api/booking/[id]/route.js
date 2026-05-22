@@ -4,6 +4,7 @@ import Booking from '@/app/(backend)/models/Booking';
 import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
 import Service from '@/app/(backend)/models/Service';
 import { applyCreditDelta, createCreditTransaction, CREDIT_TRANSACTION_TYPES } from '@/app/(backend)/lib/credits';
+import { getBookingReviewMap } from '@/app/(backend)/lib/reviews';
 
 const appendEvent = (booking, type, actorID = null, message = '', meta = {}) => {
     booking.events = booking.events || [];
@@ -145,13 +146,15 @@ export async function GET(request, { params }) {
             Service.findById(booking.serviceID).lean()
         ]);
 
+        const reviewMap = await getBookingReviewMap([booking._id]);
         const bookingOut = {
             ...booking,
             _id: booking._id?.toString?.(),
             timeSlot: booking.timeSlot ? new Date(booking.timeSlot).toISOString() : null,
             requester,
             provider,
-            service
+            service,
+            review: reviewMap[booking._id?.toString?.()] || null
         };
         return NextResponse.json({ success: true, booking: bookingOut }, { status: 200 });
     } catch (err) {
