@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Home, User, Settings, ShoppingBag, LogOut, Store, Users, Video } from 'lucide-react';
+import { Home, User, Settings, ShoppingBag, LogOut, Store, Users, Video, MessageSquare } from 'lucide-react';
 import { auth } from '@/app/(backend)/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -38,6 +38,7 @@ const Sidebar = () => {
     { name: 'Dashboard', icon: <Home size={20} />, href: '/dashboard' },
     { name: 'Profile', icon: <User size={20} />, href: '/profile' },
     { name: 'Sessions', icon: <Video size={20} />, href: '/dashboard/sessions' },
+    { name: 'Chat', icon: <MessageSquare size={20} />, href: '/dashboard/chat' },
     // { name: 'My Trades', icon: <ShoppingBag size={20} />, href: '/dashboard/trades' },
     // { name: 'Settings', icon: <Settings size={20} />, href: '/dashboard/settings' },
     { name: 'Marketplace', icon: <Store size={20} />, href: '/profile/marketplace' },

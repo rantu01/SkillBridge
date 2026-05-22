@@ -138,7 +138,21 @@ export async function GET(request, { params }) {
         console.log(`[BookingGET] lookup id=${id}`);
         const booking = await Booking.findById(id).lean();
         if (!booking) return NextResponse.json({ error: 'Booking not found', id }, { status: 404 });
-        const bookingOut = { ...booking, _id: booking._id?.toString?.(), timeSlot: booking.timeSlot ? new Date(booking.timeSlot).toISOString() : null };
+
+        const [requester, provider, service] = await Promise.all([
+            FirebaseUser.findOne({ uid: booking.requesterID }).select('uid displayName email photoURL').lean(),
+            FirebaseUser.findOne({ uid: booking.providerID }).select('uid displayName email photoURL').lean(),
+            Service.findById(booking.serviceID).lean()
+        ]);
+
+        const bookingOut = {
+            ...booking,
+            _id: booking._id?.toString?.(),
+            timeSlot: booking.timeSlot ? new Date(booking.timeSlot).toISOString() : null,
+            requester,
+            provider,
+            service
+        };
         return NextResponse.json({ success: true, booking: bookingOut }, { status: 200 });
     } catch (err) {
         console.error('Error GET booking by id:', err);
