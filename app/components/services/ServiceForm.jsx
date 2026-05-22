@@ -24,7 +24,7 @@ const ServiceForm = ({ initialData, onSave, onCancel }) => {
         }
     }, [initialData]);
 
-    const categories = ['Development', 'Design', 'Tutoring', 'Writing', 'Media', 'Marketing'];
+    const categories = ['Tutoring', 'Development', 'Media', 'Design', 'Notes', 'Tech', 'Writing',  'Marketing'];
 
     const handleSubmit = async (e) => {
         e.preventDefault();

@@ -11,6 +11,21 @@ const BookingSchema = new mongoose.Schema({
         default: 'Pending'
     },
     meetLink: { type: String, default: null },
+    creditEvents: {
+        type: [
+            {
+                type: { type: String, required: true },
+                actorID: { type: String, default: null },
+                delta: { type: Number, required: true },
+                balanceBefore: { type: Number, required: true },
+                balanceAfter: { type: Number, required: true },
+                title: { type: String, default: '' },
+                note: { type: String, default: '' },
+                createdAt: { type: Date, default: Date.now }
+            }
+        ],
+        default: []
+    },
     events: {
         type: [
             {

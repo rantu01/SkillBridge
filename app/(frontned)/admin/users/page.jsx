@@ -5,19 +5,36 @@ import {
     Users, Search, Filter, ShieldCheck,
     Shield, Trash2, Edit2, ChevronLeft,
     MoreVertical, CheckCircle, XCircle, Mail,
-    UserCircle2, Clock, Zap, ArrowUpDown
+    UserCircle2, Clock, Zap, ArrowUpDown,
+    Wallet, PlusCircle, MinusCircle, X
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
+import { auth } from '@/app/(backend)/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all'); // all, verified, unverified
+    const [currentAdmin, setCurrentAdmin] = useState(null);
+    const [creditModalUser, setCreditModalUser] = useState(null);
+    const [creditAction, setCreditAction] = useState('add');
+    const [creditAmount, setCreditAmount] = useState('');
+    const [creditNote, setCreditNote] = useState('');
+    const [creditSubmitting, setCreditSubmitting] = useState(false);
 
     useEffect(() => {
         fetchUsers();
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentAdmin(user);
+        });
+
+        return unsubscribe;
     }, []);
 
     const fetchUsers = async () => {
@@ -44,7 +61,7 @@ const UserManagement = () => {
             });
             const data = await res.json();
             if (data.success) {
-                setUsers(users.map(u => u.uid === uid ? data.user : u));
+                setUsers((prevUsers) => prevUsers.map(u => u.uid === uid ? data.user : u));
                 Swal.fire({
                     icon: 'success',
                     title: 'Status Updated',
@@ -58,6 +75,76 @@ const UserManagement = () => {
             }
         } catch (error) {
             console.error('Error toggling verification:', error);
+        }
+    };
+
+    const openCreditModal = (user) => {
+        setCreditModalUser(user);
+        setCreditAction('add');
+        setCreditAmount('');
+        setCreditNote('');
+    };
+
+    const closeCreditModal = () => {
+        setCreditModalUser(null);
+        setCreditAction('add');
+        setCreditAmount('');
+        setCreditNote('');
+    };
+
+    const submitCreditAdjustment = async () => {
+        if (!creditModalUser) return;
+
+        const parsedAmount = Number(creditAmount);
+        if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+            Swal.fire({ icon: 'error', title: 'Invalid amount', text: 'Enter a positive credit amount.' });
+            return;
+        }
+
+        const creditsDelta = creditAction === 'add' ? parsedAmount : -parsedAmount;
+
+        setCreditSubmitting(true);
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    uid: creditModalUser.uid,
+                    creditsDelta,
+                    creditsNote: creditNote,
+                    actorID: currentAdmin?.uid || null,
+                })
+            });
+
+            const data = await res.json();
+            if (data.success && data.user) {
+                await fetchUsers();
+                closeCreditModal();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Credits Updated',
+                    text: `${creditAction === 'add' ? 'Added' : 'Removed'} ${parsedAmount} credits for ${creditModalUser.displayName || creditModalUser.email}`,
+                    timer: 1800,
+                    showConfirmButton: false,
+                    background: '#ffffff',
+                    color: '#1e293b',
+                    customClass: { popup: 'rounded-[30px] shadow-2xl' }
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Update Failed',
+                    text: data.error || 'Unable to update credits',
+                    background: '#ffffff',
+                    color: '#1e293b',
+                    customClass: { popup: 'rounded-[30px] shadow-2xl' }
+                });
+            }
+        } catch (error) {
+            console.error('Error updating credits:', error);
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Server error while updating credits' });
+        } finally {
+            setCreditSubmitting(false);
         }
     };
 
@@ -207,6 +294,7 @@ const UserManagement = () => {
                                 <tr className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
                                     <th className="px-10 py-6">Member Profile</th>
                                     <th className="px-10 py-6">Contact Info</th>
+                                    <th className="px-10 py-6 text-center">Credits</th>
                                     <th className="px-10 py-6 text-center">Status</th>
                                     <th className="px-10 py-6 text-center">Joined Date</th>
                                     <th className="px-10 py-6 text-center">Control Panel</th>
@@ -248,6 +336,19 @@ const UserManagement = () => {
                                             </div>
                                         </td>
                                         <td className="px-10 py-6 text-center">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 font-black text-xs uppercase tracking-widest">
+                                                <Wallet size={14} />
+                                                {Number(user.credits || 0)} Cr
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openCreditModal(user)}
+                                                className="mt-2 block mx-auto text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 hover:text-emerald-700"
+                                            >
+                                                Edit Credits
+                                            </button>
+                                        </td>
+                                        <td className="px-10 py-6 text-center">
                                             {user.isVerified ? (
                                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-black uppercase tracking-wider">
                                                     <CheckCircle size={10} fill="currentColor" fillOpacity={0.2} /> Verified
@@ -268,6 +369,15 @@ const UserManagement = () => {
                                         <td className="px-10 py-6">
                                             <div className="flex items-center justify-center gap-3">
                                                 <button
+                                                    type="button"
+                                                    onClick={() => openCreditModal(user)}
+                                                    className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 transition-all"
+                                                    title="Adjust Credits"
+                                                >
+                                                    <PlusCircle size={20} />
+                                                </button>
+                                                <button
+                                                    type="button"
                                                     onClick={() => toggleVerification(user.uid, user.isVerified)}
                                                     className={`p-2.5 rounded-xl border transition-all ${user.isVerified
                                                             ? 'bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100'
@@ -278,6 +388,7 @@ const UserManagement = () => {
                                                     {user.isVerified ? <Shield size={20} /> : <ShieldCheck size={20} />}
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleDeleteUser(user.uid)}
                                                     className="p-2.5 rounded-xl bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white transition-all"
                                                     title="Delete User"
@@ -293,6 +404,98 @@ const UserManagement = () => {
                     </div>
                 )}
             </div>
+
+            {creditModalUser && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center px-4">
+                    <div className="w-full max-w-lg bg-white rounded-[32px] shadow-2xl border border-gray-100 overflow-hidden">
+                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Credit Control</p>
+                                <h3 className="text-2xl font-black text-gray-900 mt-1">Adjust balance</h3>
+                            </div>
+                            <button type="button" onClick={closeCreditModal} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-5">
+                            <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4">
+                                <p className="text-xs font-black uppercase tracking-widest text-gray-400">Selected Member</p>
+                                <p className="text-lg font-black text-gray-900 mt-1">{creditModalUser.displayName || 'Unnamed User'}</p>
+                                <p className="text-sm text-gray-500">{creditModalUser.email}</p>
+                                <p className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-xs font-black uppercase tracking-widest">
+                                    <Wallet size={14} /> Current: {Number(creditModalUser.credits || 0)} credits
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setCreditAction('add')}
+                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-black text-sm border transition-all ${creditAction === 'add'
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <PlusCircle size={18} /> Give Credits
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCreditAction('remove')}
+                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl font-black text-sm border transition-all ${creditAction === 'remove'
+                                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                        : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <MinusCircle size={18} /> Deduct Credits
+                                </button>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Amount</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={creditAmount}
+                                    onChange={(e) => setCreditAmount(e.target.value)}
+                                    placeholder="Enter credit amount"
+                                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none font-bold"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Note</label>
+                                <textarea
+                                    value={creditNote}
+                                    onChange={(e) => setCreditNote(e.target.value)}
+                                    placeholder="Optional reason for this adjustment"
+                                    rows={3}
+                                    className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none font-medium resize-none"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={closeCreditModal}
+                                    className="px-5 py-3 rounded-2xl border border-gray-200 text-gray-700 font-black hover:bg-gray-50 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={submitCreditAdjustment}
+                                    disabled={creditSubmitting}
+                                    className={`px-5 py-3 rounded-2xl text-white font-black transition-all disabled:opacity-60 ${creditAction === 'add' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                                        }`}
+                                >
+                                    {creditSubmitting ? 'Saving...' : creditAction === 'add' ? 'Give Credits' : 'Deduct Credits'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
