@@ -4,20 +4,20 @@ import React, { useEffect, useState } from 'react';
 import BookingForm from '@/app/components/booking/BookingForm';
 import {
   Search, ChevronLeft, ChevronRight, BookOpen, PenTool, FileText,
-  Terminal, MoreHorizontal, LayoutGrid, Heart, CheckCircle2
+  Code2, Video, NotebookPen, Megaphone, Sparkles, LayoutGrid, Heart, CheckCircle2
 } from 'lucide-react';
 import StarRating from '@/app/components/common/StarRating';
 
 const categories = [
   { id: 'Tutoring', icon: BookOpen, color: 'text-blue-500' },
-  { id: 'Development', icon: Terminal, color: 'text-indigo-500' },
-  { id: 'Media', icon: Terminal, color: 'text-indigo-500' },
+  { id: 'Development', icon: Code2, color: 'text-indigo-500' },
+  { id: 'Media', icon: Video, color: 'text-rose-500' },
   { id: 'Design', icon: PenTool, color: 'text-pink-500' },
   { id: 'Notes', icon: FileText, color: 'text-orange-500' },
-  { id: 'Tech', icon: Terminal, color: 'text-indigo-500' },
-  { id: 'Writing', icon: MoreHorizontal, color: 'text-purple-500' },
-  { id: 'Marketing', icon: MoreHorizontal, color: 'text-purple-500' },
-  { id: 'Other', icon: MoreHorizontal, color: 'text-purple-500' },
+  { id: 'Tech', icon: Sparkles, color: 'text-cyan-500' },
+  { id: 'Writing', icon: NotebookPen, color: 'text-purple-500' },
+  { id: 'Marketing', icon: Megaphone, color: 'text-emerald-500' },
+  { id: 'Other', icon: Sparkles, color: 'text-slate-500' },
 ];
 
 const MarketplacePage = () => {
@@ -26,6 +26,8 @@ const MarketplacePage = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedService, setSelectedService] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -46,10 +48,46 @@ const MarketplacePage = () => {
     fetchServices();
   }, [selectedCategory]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
+
   const filteredServices = services.filter(service =>
     service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     service.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredServices.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+  const paginatedServices = filteredServices.slice(startIndex, startIndex + itemsPerPage);
+
+  const buildPageItems = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let page = 1; page <= totalPages; page += 1) pages.push(page);
+      return pages;
+    }
+
+    pages.push(1);
+
+    const left = Math.max(2, safeCurrentPage - 1);
+    const right = Math.min(totalPages - 1, safeCurrentPage + 1);
+
+    if (left > 2) pages.push('...');
+
+    for (let page = left; page <= right; page += 1) {
+      pages.push(page);
+    }
+
+    if (right < totalPages - 1) pages.push('...');
+
+    pages.push(totalPages);
+
+    return pages;
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FDFDFD] font-sans text-slate-900 lg:flex-row">
@@ -72,7 +110,7 @@ const MarketplacePage = () => {
                 : 'text-slate-500 hover:bg-slate-50'
                 }`}
             >
-              <cat.icon size={18} className={selectedCategory === cat.id ? 'text-[#4F46E5]' : 'text-slate-400'} />
+              <cat.icon size={18} className={selectedCategory === cat.id ? cat.color : 'text-slate-400'} />
               <span className="whitespace-nowrap text-sm font-bold">{cat.id}</span>
             </button>
           ))}
@@ -124,8 +162,13 @@ const MarketplacePage = () => {
             <div className="col-span-full flex items-center justify-center py-20">
               <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#4F46E5] border-t-transparent" />
             </div>
+          ) : paginatedServices.length === 0 ? (
+            <div className="col-span-full rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-6 py-16 text-center">
+              <p className="text-lg font-bold text-slate-700">No services found</p>
+              <p className="mt-2 text-sm text-slate-400">Try a different category or clear your search.</p>
+            </div>
           ) : (
-            filteredServices.map((service) => (
+            paginatedServices.map((service) => (
               <div
                 key={service._id}
                 className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white transition-all duration-500 hover:-translate-y-2 hover:border-[#4F46E5]/30 hover:shadow-[0_20px_60px_-15px_rgba(79,70,229,0.35)]"
@@ -265,18 +308,39 @@ const MarketplacePage = () => {
 
         {/* Pagination */}
         <div className="mt-16 flex flex-wrap items-center justify-center gap-3 sm:mt-24">
-          <button className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-300 hover:text-[#4F46E5] transition-all">
+          <button
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={safeCurrentPage === 1}
+            className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-300 transition-all hover:text-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Previous page"
+          >
             <ChevronLeft size={20} />
           </button>
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <button className="w-10 h-10 bg-[#4F46E5] text-white rounded-[14px] font-black text-sm shadow-lg shadow-indigo-100">1</button>
-            {[2, 3].map(n => (
-              <button key={n} className="w-10 h-10 hover:bg-slate-50 rounded-[14px] font-black text-sm text-slate-300 transition-colors">{n}</button>
+            {buildPageItems().map((item, index) => (
+              item === '...' ? (
+                <span key={`ellipsis-${index}`} className="px-1 font-black text-slate-200">...</span>
+              ) : (
+                <button
+                  key={item}
+                  onClick={() => setCurrentPage(item)}
+                  className={`h-10 w-10 rounded-[14px] text-sm font-black transition-colors ${safeCurrentPage === item
+                    ? 'bg-[#4F46E5] text-white shadow-lg shadow-indigo-100'
+                    : 'text-slate-300 hover:bg-slate-50'
+                    }`}
+                  aria-current={safeCurrentPage === item ? 'page' : undefined}
+                >
+                  {item}
+                </button>
+              )
             ))}
-            <span className="px-1 text-slate-200 font-black">...</span>
-            <button className="w-10 h-10 hover:bg-slate-50 rounded-[14px] font-black text-sm text-slate-300 transition-colors">12</button>
           </div>
-          <button className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-300 hover:text-[#4F46E5] transition-all">
+          <button
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={safeCurrentPage === totalPages}
+            className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-300 transition-all hover:text-[#4F46E5] disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Next page"
+          >
             <ChevronRight size={20} />
           </button>
         </div>
