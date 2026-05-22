@@ -12,6 +12,7 @@ import { auth } from '@/app/(backend)/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import Swal from 'sweetalert2';
 import Link from 'next/link';
+import StarRating from '@/app/components/common/StarRating';
 
 const ProfilePage = () => {
     const [user, setUser] = useState(null);
@@ -26,6 +27,9 @@ const ProfilePage = () => {
     const [newSkill, setNewSkill] = useState('');
     const [recentPosts, setRecentPosts] = useState([]);
     const [loadingPosts, setLoadingPosts] = useState(false);
+    const [reviewSummary, setReviewSummary] = useState({ averageRating: 0, reviewCount: 0 });
+    const [recentReviews, setRecentReviews] = useState([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -50,15 +54,18 @@ const ProfilePage = () => {
                         setDisplayName(data.user.displayName || '');
                         setSkills(data.user.skills || []);
                         fetchRecentPosts(currentUser.uid);
+                        fetchReviewSummary(currentUser.uid);
                     } else {
                         console.warn('[SyncUser] Failed or no user data, falling back to Firebase Auth');
                         setUser(currentUser);
                         setDisplayName(currentUser.displayName || '');
+                        fetchReviewSummary(currentUser.uid);
                     }
                 } catch (error) {
                     console.error("Error syncing user:", error);
                     setUser(currentUser);
                     setDisplayName(currentUser.displayName || '');
+                    fetchReviewSummary(currentUser.uid);
                 }
             } else {
                 setUser(null);
@@ -177,6 +184,22 @@ const ProfilePage = () => {
             console.error("Error fetching recent posts:", error);
         } finally {
             setLoadingPosts(false);
+        }
+    };
+
+    const fetchReviewSummary = async (uid) => {
+        setLoadingReviews(true);
+        try {
+            const res = await fetch(`/api/reviews?providerID=${uid}&limit=3`);
+            const data = await res.json();
+            if (data.success) {
+                setReviewSummary(data.summary || { averageRating: 0, reviewCount: 0 });
+                setRecentReviews(data.reviews || []);
+            }
+        } catch (error) {
+            console.error('Error fetching review summary:', error);
+        } finally {
+            setLoadingReviews(false);
         }
     };
 
@@ -331,6 +354,22 @@ const ProfilePage = () => {
                             <span className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full text-xs font-bold text-green-600 border border-green-100">
                                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> Available for tasks
                             </span>
+                            <span className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 rounded-full text-xs font-bold text-orange-600 border border-orange-100">
+                                <StarRating
+                                    rating={reviewSummary.averageRating}
+                                    count={reviewSummary.reviewCount}
+                                    size={12}
+                                    className="gap-0.5"
+                                    showValue={false}
+                                    showCount={false}
+                                    starClassName="text-orange-400 fill-orange-400"
+                                />
+                                {reviewSummary.reviewCount > 0 ? (
+                                    <span>{reviewSummary.averageRating.toFixed(1)} avg</span>
+                                ) : (
+                                    <span>No ratings yet</span>
+                                )}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -448,31 +487,60 @@ const ProfilePage = () => {
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-xl font-black text-gray-800">Recent Reviews</h2>
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 rounded-xl text-orange-600 font-black">
-                                <Star size={16} fill="currentColor" /> 4.9 <span className="text-gray-400 font-bold text-xs ml-1">(24 ratings)</span>
+                                <StarRating
+                                    rating={reviewSummary.averageRating}
+                                    count={reviewSummary.reviewCount}
+                                    size={16}
+                                    className="gap-0.5"
+                                    showValue={false}
+                                    showCount={false}
+                                    starClassName="text-orange-400 fill-orange-400"
+                                />
+                                <span className="text-gray-400 font-bold text-xs ml-1">
+                                    {reviewSummary.reviewCount > 0 ? `${reviewSummary.reviewCount} rating${reviewSummary.reviewCount === 1 ? '' : 's'}` : 'No ratings yet'}
+                                </span>
                             </div>
                         </div>
 
-                        <div className="space-y-4">
-                            {[
-                                { name: 'Sarah Jenkins', time: '2 days ago', service: 'Python Tutoring', comment: '"Alex was incredibly helpful with my data structures project. He explained complex concepts in a way that actually made sense. Definitely worth the credits!"' },
-                                { name: 'Mark Thompson', time: '1 week ago', service: 'UI/UX Design', comment: '"Great eye for design. Helped me refine my portfolio site\'s user journey. Efficient and professional."' }
-                            ].map((review, i) => (
-                                <div key={i} className="p-6 rounded-[30px] border border-gray-50 bg-[#F9FAFB]/50 space-y-3">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gray-200" />
-                                            <div>
-                                                <h4 className="font-bold text-gray-800">{review.name}</h4>
-                                                <p className="text-[10px] text-gray-400 font-bold uppercase">{review.time} • {review.service}</p>
+                        {loadingReviews ? (
+                            <div className="flex items-center justify-center py-10 text-sm font-bold text-gray-400">
+                                <Loader2 size={18} className="mr-2 animate-spin" /> Loading reviews...
+                            </div>
+                        ) : recentReviews.length > 0 ? (
+                            <div className="space-y-4">
+                                {recentReviews.map((review) => (
+                                    <div key={review._id} className="p-6 rounded-[30px] border border-gray-50 bg-[#F9FAFB]/50 space-y-3">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200">
+                                                    {review.reviewer?.photoURL ? (
+                                                        <img src={review.reviewer.photoURL} alt={review.reviewer?.displayName || 'Reviewer'} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-gray-200" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-gray-800">{review.reviewer?.displayName || 'Anonymous reviewer'}</h4>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase">
+                                                        {review.createdAt ? new Date(review.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
+                                                        {' '}• {review.service?.title || 'Service'}
+                                                    </p>
+                                                </div>
                                             </div>
+                                            <StarRating rating={review.rating} count={0} size={14} showValue={false} showCount={false} />
                                         </div>
-                                        <div className="flex text-orange-400"><Star size={14} fill="currentColor" /> <Star size={14} fill="currentColor" /> <Star size={14} fill="currentColor" /> <Star size={14} fill="currentColor" /> <Star size={14} fill="currentColor" /></div>
+                                        <p className="text-gray-500 text-sm leading-relaxed italic">{review.feedback || 'No written feedback provided.'}</p>
                                     </div>
-                                    <p className="text-gray-500 text-sm leading-relaxed italic">{review.comment}</p>
-                                </div>
-                            ))}
-                        </div>
-                        <button className="w-full mt-6 text-blue-600 font-bold text-sm hover:underline">Read All 24 Reviews</button>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-[30px] border border-dashed border-gray-200 bg-gray-50/70 px-6 py-8 text-sm text-gray-500 text-center">
+                                No reviews yet. Completed bookings will appear here once clients leave feedback.
+                            </div>
+                        )}
+                        <button className="w-full mt-6 text-blue-600 font-bold text-sm hover:underline">
+                            {reviewSummary.reviewCount > 0 ? `Read All ${reviewSummary.reviewCount} Reviews` : 'Reviews will appear here'}
+                        </button>
                     </div>
                 </div>
 

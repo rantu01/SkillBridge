@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { auth } from '@/app/(backend)/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import BookingStatusBadge from '@/app/components/booking/BookingStatusBadge';
-import { Video, Copy, Check, AlertCircle } from 'lucide-react';
+import { Video, Copy, Check, AlertCircle, MessageSquarePlus } from 'lucide-react';
 
 const SessionsPage = () => {
     const [user, setUser] = useState(null);
     const [allBookings, setAllBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [copiedLink, setCopiedLink] = useState(null);
+    const router = useRouter();
 
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, (u) => {
@@ -108,6 +110,13 @@ const SessionsPage = () => {
                                                 </>
                                             )}
                                         </button>
+                                        <button
+                                            onClick={() => router.push(`/dashboard/chat?bookingID=${encodeURIComponent(b._id)}`)}
+                                            className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium flex items-center justify-center gap-2 transition"
+                                        >
+                                            <MessageSquarePlus size={16} />
+                                            Open Chat
+                                        </button>
                                     </div>
                                 </div>
 
@@ -170,6 +179,7 @@ const SessionsPage = () => {
                         </p>
                     </div>
                 )}
+
             </div>
         </div>
     );

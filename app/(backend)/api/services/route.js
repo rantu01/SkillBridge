@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import Service from '@/app/(backend)/models/Service';
 import crypto from 'crypto';
+import { getServiceRatingMap } from '@/app/(backend)/lib/reviews';
 
 // GET /api/services - Fetch all services with optional category filtering
 export async function GET(request) {
@@ -33,9 +34,13 @@ export async function GET(request) {
         }, {});
 
         // Attach owner details to services
+        const ratingMap = await getServiceRatingMap(services.map((service) => service._id));
+
         const servicesWithOwners = services.map(service => ({
             ...service,
-            owner: userMap[service.ownerID] || null
+            _id: service._id?.toString?.() || service._id,
+            owner: userMap[service.ownerID] || null,
+            ratingSummary: ratingMap[service._id?.toString?.() || service._id] || { averageRating: 0, reviewCount: 0 }
         }));
 
         return NextResponse.json({ success: true, services: servicesWithOwners }, { status: 200 });
