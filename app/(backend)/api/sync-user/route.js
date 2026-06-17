@@ -42,6 +42,17 @@ export async function POST(request) {
 
     const plainUser = user.toObject();
     console.log(`[SyncUser] Returning User:`, JSON.stringify(plainUser, null, 2));
+
+    // Check if user is blocked/suspended and auto-activate if suspension expired
+    if (plainUser.status === 'suspended' && plainUser.suspendedUntil && new Date(plainUser.suspendedUntil) <= new Date()) {
+        const updatedUser = await FirebaseUser.findOneAndUpdate(
+            { uid },
+            { $set: { status: 'active', statusReason: '', suspendedUntil: null, blockedBy: null, blockedAt: null } },
+            { new: true }
+        );
+        return NextResponse.json({ success: true, user: updatedUser.toObject() }, { status: 200 });
+    }
+
     return NextResponse.json({ success: true, user: plainUser }, { status: 200 });
   } catch (error) {
     console.error('Error syncing user:', error);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CheckCircle2, Upload, Clock, AlertCircle, X, FileText, Image as ImageIcon, Edit2 } from 'lucide-react';
 import { auth } from '@/app/(backend)/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -9,15 +9,26 @@ import Swal from 'sweetalert2';
 const StudentVerificationPage = () => {
     const [verificationStatus, setVerificationStatus] = useState('pending'); // pending, verified, processing, rejected
     const [file, setFile] = useState(null);
-    const [previewUrl, setPreviewUrl] = useState(null);
     const [user, setUser] = useState(null);
     const [existingDocument, setExistingDocument] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const fetchExistingDocument = async (uid) => {
+        try {
+            const response = await fetch(`/api/get-user-verification?uid=${uid}`);
+            const data = await response.json();
+            if (data.hasDocument) {
+                setExistingDocument(data);
+                setVerificationStatus(data.status);
+            }
+        } catch (error) {
+            console.error('Error fetching document:', error);
+        }
+    };
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                // Fetch full user data from our backend to get isVerified status
                 try {
                     const res = await fetch(`/api/sync-user`, {
                         method: 'POST',
@@ -49,30 +60,10 @@ const StudentVerificationPage = () => {
         return unsubscribe;
     }, []);
 
-    useEffect(() => {
-        if (!file) {
-            setPreviewUrl(null);
-            return;
-        }
-
-        const objectUrl = URL.createObjectURL(file);
-        setPreviewUrl(objectUrl);
-
-        return () => URL.revokeObjectURL(objectUrl);
+    const previewUrl = useMemo(() => {
+        if (!file) return null;
+        return URL.createObjectURL(file);
     }, [file]);
-
-    const fetchExistingDocument = async (uid) => {
-        try {
-            const response = await fetch(`/api/get-user-verification?uid=${uid}`);
-            const data = await response.json();
-            if (data.hasDocument) {
-                setExistingDocument(data);
-                setVerificationStatus(data.status); // e.g., 'pending', 'approved', 'rejected'
-            }
-        } catch (error) {
-            console.error('Error fetching document:', error);
-        }
-    };
 
     const handleFileUpload = (e) => {
         const uploadedFile = e.target.files?.[0];
@@ -227,7 +218,7 @@ const StudentVerificationPage = () => {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-black text-red-900">Verification Rejected</h2>
-                                <p className="text-red-700 font-medium mt-1">We couldn't verify your document. Please upload a clearer copy of your NWU ID.</p>
+                                <p className="text-red-700 font-medium mt-1">We couldn&apos;t verify your document. Please upload a clearer copy of your NWU ID.</p>
                             </div>
                         </>
                     )}

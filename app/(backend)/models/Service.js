@@ -10,5 +10,9 @@ const ServiceSchema = new mongoose.Schema({
     ownerID: { type: String, required: true }, // UID from Firebase/FirebaseUser
 }, { timestamps: true });
 
+ServiceSchema.index({ ownerID: 1 });
+ServiceSchema.index({ category: 1 });
+ServiceSchema.index({ availability: 1 });
+
 // Avoid overwriting model if it already exists
 export default mongoose.models.Service || mongoose.model('Service', ServiceSchema);

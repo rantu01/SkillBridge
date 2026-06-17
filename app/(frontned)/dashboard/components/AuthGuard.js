@@ -30,7 +30,14 @@ const AuthGuard = ({ children, allowedEmails = [], redirectTo = '/' }) => {
   }, [allowedEmails, redirectTo, router]);
 
   if (loading) {
-    return <div>Loading...</div>; // or a spinner
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+          <p className="text-gray-500 font-medium text-sm">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
