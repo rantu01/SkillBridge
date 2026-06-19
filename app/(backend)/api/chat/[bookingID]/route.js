@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import Booking from '@/app/(backend)/models/Booking';
 import Chat from '@/app/(backend)/models/Chat';
+import { checkUserStatus } from '@/app/(backend)/lib/userStatus';
 
 function generateSignature(publicId, timestamp, apiSecret) {
     const signatureString = `public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
@@ -98,6 +99,11 @@ export async function GET(request, { params }) {
             return NextResponse.json({ error: 'bookingID and userID are required' }, { status: 400 });
         }
 
+        const statusCheck = await checkUserStatus(userID);
+        if (!statusCheck.allowed) {
+            return NextResponse.json({ error: statusCheck.error }, { status: statusCheck.status });
+        }
+
         const context = await getAuthorizedChatContext(bookingID, userID);
         if (context.error) {
             return NextResponse.json({ error: context.error }, { status: context.status });
@@ -157,6 +163,11 @@ export async function POST(request, { params }) {
 
         if (!message && uploadedFiles.length === 0) {
             return NextResponse.json({ error: 'Message text or files are required' }, { status: 400 });
+        }
+
+        const statusCheck = await checkUserStatus(senderID);
+        if (!statusCheck.allowed) {
+            return NextResponse.json({ error: statusCheck.error }, { status: statusCheck.status });
         }
 
         const context = await getAuthorizedChatContext(bookingID, senderID);

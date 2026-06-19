@@ -2,9 +2,22 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
 
+const ADMIN_EMAILS = ['admin@admin.com'];
+
+async function isAdminEmail(request) {
+    const adminEmail = request.headers.get('x-admin-email');
+    if (adminEmail && ADMIN_EMAILS.map(e => e.toLowerCase()).includes(adminEmail.toLowerCase())) {
+        return true;
+    }
+    return false;
+}
+
 // GET all users
-export async function GET() {
+export async function GET(request) {
     try {
+        if (!await isAdminEmail(request)) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
+        }
         await dbConnect();
         const users = await FirebaseUser.find().sort({ createdAt: -1 });
         return NextResponse.json({ success: true, users }, { status: 200 });
@@ -17,6 +30,9 @@ export async function GET() {
 // PATCH update user (e.g., toggle verification)
 export async function PATCH(request) {
     try {
+        if (!await isAdminEmail(request)) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
+        }
         await dbConnect();
         const { uid, isVerified, displayName, creditsDelta, creditsNote, actorID } = await request.json();
 
@@ -73,6 +89,9 @@ export async function PATCH(request) {
 // DELETE user
 export async function DELETE(request) {
     try {
+        if (!await isAdminEmail(request)) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
+        }
         await dbConnect();
         const { searchParams } = new URL(request.url);
         const uid = searchParams.get('uid');

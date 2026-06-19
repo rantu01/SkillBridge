@@ -4,6 +4,7 @@ import Chat from '@/app/(backend)/models/Chat';
 import Booking from '@/app/(backend)/models/Booking';
 import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
 import Service from '@/app/(backend)/models/Service';
+import { checkUserStatus } from '@/app/(backend)/lib/userStatus';
 
 function normalizeBooking(booking) {
     return booking
@@ -48,6 +49,11 @@ export async function GET(request) {
 
         if (!userID) {
             return NextResponse.json({ error: 'userID is required' }, { status: 400 });
+        }
+
+        const statusCheck = await checkUserStatus(userID);
+        if (!statusCheck.allowed) {
+            return NextResponse.json({ error: statusCheck.error }, { status: statusCheck.status });
         }
 
         const chats = await Chat.find({

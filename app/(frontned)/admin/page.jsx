@@ -3,20 +3,38 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, Trash2, Eye, FileText, UserCircle2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { auth } from '@/app/(backend)/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const AdminDashboard = () => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [currentAdmin, setCurrentAdmin] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    fetchPendingUsers();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentAdmin(user);
+      if (user) {
+        setAuthReady(true);
+      }
+    });
+    return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (authReady && currentAdmin) {
+      fetchPendingUsers();
+    }
+  }, [authReady, currentAdmin]);
 
   const fetchPendingUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/pending-verifications');
+      const response = await fetch('/api/admin/pending-verifications', {
+        headers: { 'x-admin-email': currentAdmin?.email || '' }
+      });
       const data = await response.json();
       setPendingUsers(data.users || []);
     } catch (error) {
@@ -30,7 +48,7 @@ const AdminDashboard = () => {
     try {
       const response = await fetch('/api/admin/approve-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-admin-email': currentAdmin?.email || '' },
         body: JSON.stringify({ uid, action }),
       });
 
