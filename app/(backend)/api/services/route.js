@@ -3,6 +3,7 @@ import dbConnect from '@/app/(backend)/lib/mongodb';
 import Service from '@/app/(backend)/models/Service';
 import crypto from 'crypto';
 import { getServiceRatingMap } from '@/app/(backend)/lib/reviews';
+import { checkUserStatus } from '@/app/(backend)/lib/userStatus';
 
 // GET /api/services - Fetch all services with optional category filtering
 export async function GET(request) {
@@ -66,6 +67,11 @@ export async function POST(request) {
 
         if (!title || !description || !category || !price || !ownerID) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        const statusCheck = await checkUserStatus(ownerID);
+        if (!statusCheck.allowed) {
+            return NextResponse.json({ error: statusCheck.error }, { status: statusCheck.status });
         }
 
         let imageUrl = '';

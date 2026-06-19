@@ -5,6 +5,13 @@ import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
 import Service from '@/app/(backend)/models/Service';
 import { applyCreditDelta, createCreditTransaction, CREDIT_TRANSACTION_TYPES } from '@/app/(backend)/lib/credits';
 
+const ADMIN_EMAILS = ['admin@admin.com'];
+
+function isAdminEmail(request) {
+    const adminEmail = request.headers.get('x-admin-email');
+    return adminEmail && ADMIN_EMAILS.map(e => e.toLowerCase()).includes(adminEmail.toLowerCase());
+}
+
 const appendEvent = (booking, type, actorID = null, message = '', meta = {}) => {
     booking.events = booking.events || [];
     booking.events.push({
@@ -18,6 +25,9 @@ const appendEvent = (booking, type, actorID = null, message = '', meta = {}) => 
 
 export async function PUT(request, { params }) {
     try {
+        if (!isAdminEmail(request)) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
+        }
         await dbConnect();
         const { id } = await params;
         const body = await request.json();

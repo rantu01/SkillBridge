@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 import BookingStatusBadge from '@/app/components/booking/BookingStatusBadge';
+import { auth } from '@/app/(backend)/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const statusOptions = ['all', 'Pending', 'Approved', 'In Progress', 'Completed', 'Rejected'];
 
@@ -12,11 +14,26 @@ const AdminBookingsPage = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [loading, setLoading] = useState(true);
     const [actionLoadingId, setActionLoadingId] = useState(null);
+    const [currentAdmin, setCurrentAdmin] = useState(null);
+    const [authReady, setAuthReady] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentAdmin(user);
+            if (user) {
+                setAuthReady(true);
+            }
+        });
+        return unsubscribe;
+    }, []);
 
     const fetchBookings = useCallback(async (activeFilter = statusFilter) => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin/bookings?status=${encodeURIComponent(activeFilter)}`);
+            const adminEmail = currentAdmin?.email || '';
+            const res = await fetch(`/api/admin/bookings?status=${encodeURIComponent(activeFilter)}`, {
+                headers: { 'x-admin-email': adminEmail }
+            });
             const data = await res.json();
             if (data.success) {
                 setBookings(data.bookings || []);
@@ -30,11 +47,13 @@ const AdminBookingsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter]);
+    }, [statusFilter, currentAdmin?.email]);
 
     useEffect(() => {
-        fetchBookings(statusFilter);
-    }, [fetchBookings, statusFilter]);
+        if (authReady && currentAdmin) {
+            fetchBookings(statusFilter);
+        }
+    }, [fetchBookings, statusFilter, authReady, currentAdmin]);
 
     const filteredBookings = bookings;
 
@@ -57,7 +76,7 @@ const AdminBookingsPage = () => {
         try {
             const res = await fetch(`/api/admin/bookings/${encodeURIComponent(bookingId)}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-admin-email': currentAdmin?.email || '' },
                 body: JSON.stringify({ action, actorID: 'admin' })
             });
             const data = await res.json();

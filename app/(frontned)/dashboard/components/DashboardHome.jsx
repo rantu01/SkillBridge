@@ -105,7 +105,7 @@ const DashboardHome = () => {
     }
 
     return (
-        <div className="space-y-10 pb-10 mt-100">
+        <div className="space-y-10 pb-10">
             {/* --- Welcome Header --- */}
             <div className="bg-white p-10 rounded-[40px] shadow-sm border border-gray-50 uppercase">
                 <h1 className="text-4xl font-extrabold text-gray-900 leading-tight">

@@ -6,6 +6,11 @@ const FirebaseUserSchema = new mongoose.Schema({
   displayName: { type: String, default: '' },
   photoURL: { type: String, default: '' },
   isVerified: { type: Boolean, default: false },
+  status: { type: String, enum: ['active', 'blocked', 'suspended'], default: 'active' },
+  statusReason: { type: String, default: '' },
+  suspendedUntil: { type: Date, default: null },
+  blockedBy: { type: String, default: null },
+  blockedAt: { type: Date, default: null },
   credits: { type: Number, default: 0, min: 0 },
   skills: { type: [String], default: [] },
   creditTransactions: {
@@ -26,6 +31,11 @@ const FirebaseUserSchema = new mongoose.Schema({
     default: []
   },
 }, { timestamps: true });
+
+FirebaseUserSchema.index({ email: 1 });
+FirebaseUserSchema.index({ status: 1 });
+FirebaseUserSchema.index({ isVerified: 1 });
+FirebaseUserSchema.index({ createdAt: -1 });
 
 // During development, Next.js hot reloading can cause issues with Mongoose models already existing.
 if (process.env.NODE_ENV === 'development') {

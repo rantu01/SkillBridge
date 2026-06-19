@@ -5,6 +5,7 @@ import Service from '@/app/(backend)/models/Service';
 import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
 import { applyCreditDelta, createCreditTransaction, CREDIT_TRANSACTION_TYPES } from '@/app/(backend)/lib/credits';
 import { getBookingReviewMap } from '@/app/(backend)/lib/reviews';
+import { checkUserStatus } from '@/app/(backend)/lib/userStatus';
 
 const AUTO_APPROVE_BOOKINGS = process.env.AUTO_APPROVE_BOOKINGS === 'true';
 
@@ -125,6 +126,16 @@ export async function POST(request) {
         const requester = await FirebaseUser.findOne({ uid: requesterID });
         if (!requester) {
             return NextResponse.json({ error: 'Requester not found' }, { status: 404 });
+        }
+
+        const statusCheck = await checkUserStatus(requesterID);
+        if (!statusCheck.allowed) {
+            return NextResponse.json({ error: statusCheck.error }, { status: statusCheck.status });
+        }
+
+        const providerStatusCheck = await checkUserStatus(providerID);
+        if (!providerStatusCheck.allowed) {
+            return NextResponse.json({ error: 'Provider account is restricted. Cannot create booking.' }, { status: 403 });
         }
 
         const servicePrice = Number(service.price || 0);

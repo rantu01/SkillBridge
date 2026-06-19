@@ -3,8 +3,14 @@ import dbConnect from '@/app/(backend)/lib/mongodb';
 import FirebaseUser from '@/app/(backend)/models/FirebaseUser';
 import StudentVerification from '@/app/(backend)/models/StudentVerification';
 
-export async function GET() {
+const ADMIN_EMAILS = ['admin@admin.com'];
+
+export async function GET(request) {
   try {
+    const adminEmail = request.headers.get('x-admin-email');
+    if (!adminEmail || !ADMIN_EMAILS.map(e => e.toLowerCase()).includes(adminEmail.toLowerCase())) {
+      return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
+    }
     await dbConnect();
 
     // Get all verification documents

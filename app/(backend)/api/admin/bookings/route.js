@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import Booking from '@/app/(backend)/models/Booking';
 
+const ADMIN_EMAILS = ['admin@admin.com'];
+
+function isAdminEmail(request) {
+    const adminEmail = request.headers.get('x-admin-email');
+    return adminEmail && ADMIN_EMAILS.map(e => e.toLowerCase()).includes(adminEmail.toLowerCase());
+}
+
 const enrichBookings = async (bookings) => {
     const FirebaseUser = (await import('@/app/(backend)/models/FirebaseUser')).default;
     const Service = (await import('@/app/(backend)/models/Service')).default;
@@ -30,6 +37,9 @@ const enrichBookings = async (bookings) => {
 
 export async function GET(request) {
     try {
+        if (!isAdminEmail(request)) {
+            return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
+        }
         await dbConnect();
 
         const { searchParams } = new URL(request.url);

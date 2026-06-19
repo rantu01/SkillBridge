@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/app/(backend)/lib/mongodb';
 import Service from '@/app/(backend)/models/Service';
 import crypto from 'crypto';
+import { checkUserStatus } from '@/app/(backend)/lib/userStatus';
 
 // PUT /api/services/[id] - Update a service
 export async function PUT(request, { params }) {
@@ -27,6 +28,11 @@ export async function PUT(request, { params }) {
         // Basic ownership check
         if (service.ownerID !== ownerID) {
             return NextResponse.json({ error: 'Unauthorized: You do not own this service' }, { status: 403 });
+        }
+
+        const statusCheck = await checkUserStatus(ownerID);
+        if (!statusCheck.allowed) {
+            return NextResponse.json({ error: statusCheck.error }, { status: statusCheck.status });
         }
 
         let imageUrl = service.image;

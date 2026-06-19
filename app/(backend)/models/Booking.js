@@ -44,4 +44,9 @@ const BookingSchema = new mongoose.Schema({
     autoApproved: { type: Boolean, default: false }
 }, { timestamps: true });
 
+BookingSchema.index({ requesterID: 1, status: 1 });
+BookingSchema.index({ providerID: 1, status: 1 });
+BookingSchema.index({ serviceID: 1 });
+BookingSchema.index({ status: 1 });
+
 export default mongoose.models.Booking || mongoose.model('Booking', BookingSchema);

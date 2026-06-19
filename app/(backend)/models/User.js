@@ -6,6 +6,9 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   department: { type: String, required: true },
   verified: { type: Boolean, default: false },
+  status: { type: String, enum: ['active', 'blocked', 'suspended'], default: 'active' },
+  statusReason: { type: String, default: '' },
+  suspendedUntil: { type: Date, default: null },
   studentID: { type: String, default: "" },
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
   credits: { type: Number, default: 0, min: 0 },
@@ -27,5 +30,8 @@ const UserSchema = new mongoose.Schema({
     default: []
   }
 }, { timestamps: true });
+
+UserSchema.index({ email: 1 });
+UserSchema.index({ role: 1 });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

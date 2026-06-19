@@ -1,10 +1,5 @@
+import dns from 'node:dns';
 import mongoose from 'mongoose';
-
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
 
 let cached = global.mongoose;
 
@@ -14,24 +9,31 @@ if (!cached) {
 
 async function dbConnect() {
   if (cached.conn) {
-    // console.log("Using existing MongoDB connection"); // Optional: logic check
     return cached.conn;
   }
 
   if (!cached.promise) {
-    const opts = {
+    const uri = process.env.MONGODB_URI;
+
+    if (!uri) {
+      throw new Error('MONGODB_URI is missing');
+    }
+
+    try {
+      dns.setServers(['8.8.8.8', '1.1.1.1']);
+    } catch (dnsError) {
+      console.warn('Failed to set public DNS servers, falling back to system defaults:', dnsError.message);
+    }
+
+    mongoose.set('strictQuery', true);
+
+    const options = {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log("✅ MongoDB Connected Successfully!"); // <--- Eta add koro
-      return mongoose;
-    }).catch((err) => {
-      console.error("❌ MongoDB Connection Error:", err); // <--- Error hole eta dekhabe
-      throw err;
-    });
+    cached.promise = mongoose.connect(uri, options);
   }
-  
+
   cached.conn = await cached.promise;
   return cached.conn;
 }
